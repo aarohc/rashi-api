@@ -1,0 +1,40 @@
+{
+  "name": "rashi-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "engines": {
+    "node": ">=24.11.1",
+    "npm": ">=11.0.0"
+  },
+  "scripts": {
+    "preinstall": "node -e \"if(!process.version.match(/^v24\\./)){console.error('❌ Error: Node.js 24 is required. Current:', process.version);console.error('   Please run: nvm use 24.11.1');process.exit(1)}\"",
+    "setup": "bash setup.sh",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "start": "node server.js"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coveragePathIgnorePatterns": [
+      "/node_modules/"
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "body-parser": "^2.2.0",
+    "express": "^5.1.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "swisseph-v2": "^1.0.4",
+    "vedic-astrology": "^1.0.6"
+  },
+  "devDependencies": {
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4"
+  }
+}
