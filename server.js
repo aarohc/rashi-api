@@ -7,6 +7,7 @@ const swisseph = require('swisseph-v2');
 const { generateHoroscopeSVG } = require('./horoscopeGenerator');
 const { generateVimshottariDasha } = require('./vimshottariService');
 const { computeCompatibility } = require('./compatibilityService');
+const { calculatePlanetAspects } = require('./aspectsService');
 const { normalizeDateToYmd } = require('./utils');
 
 const app = express();
@@ -61,6 +62,10 @@ const swaggerOptions = {
       {
         name: 'Compatibility',
         description: 'Relationship compatibility calculations'
+      },
+      {
+        name: 'Aspects',
+        description: 'Vedic planetary aspect (drishti) calculations'
       }
     ]
   },
@@ -656,6 +661,215 @@ app.post('/api/compatibility', (req, res) => {
   } catch (error) {
     console.error('Error computing compatibility:', error);
     res.status(500).json({ error: 'Failed to compute compatibility' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/planetaspects:
+ *   post:
+ *     summary: Calculate Vedic planetary aspects (drishti)
+ *     description: |
+ *       Computes planetary aspects based on Vedic astrology rules.
+ *       
+ *       **Aspect Rules:**
+ *       - All planets have a 7th house aspect (full/opposition aspect)
+ *       - Mars has special aspects on 4th, 7th, and 8th houses
+ *       - Jupiter has special aspects on 5th, 7th, and 9th houses
+ *       - Saturn has special aspects on 3rd, 7th, and 10th houses
+ *       - Rahu/Ketu have aspects on 5th, 7th, and 9th houses
+ *     tags: [Aspects]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - date
+ *               - time
+ *               - lat
+ *               - lng
+ *               - timezone
+ *             properties:
+ *               date:
+ *                 type: string
+ *                 format: date
+ *                 example: "1979-09-05"
+ *                 description: Birth date in yyyy-mm-dd format (or dd-mm-yyyy will be auto-converted)
+ *               time:
+ *                 type: string
+ *                 format: time
+ *                 example: "19:35:00"
+ *                 description: Birth time in HH:MM:SS format (24-hour)
+ *               lat:
+ *                 type: number
+ *                 format: float
+ *                 example: 21.1702
+ *                 description: Latitude of birth place (decimal degrees)
+ *               lng:
+ *                 type: number
+ *                 format: float
+ *                 example: 72.8311
+ *                 description: Longitude of birth place (decimal degrees)
+ *               timezone:
+ *                 type: number
+ *                 format: float
+ *                 example: 5.5
+ *                 description: Timezone offset in hours (e.g., 5.5 for IST, -5 for EST)
+ *     responses:
+ *       200:
+ *         description: Successful aspect calculation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     aspectsByPlanet:
+ *                       type: object
+ *                       description: Aspects cast by each planet
+ *                     aspectsReceived:
+ *                       type: object
+ *                       description: Aspects received by each planet
+ *                     mutualAspects:
+ *                       type: array
+ *                       description: Pairs of planets that mutually aspect each other
+ *                     aspectsByHouse:
+ *                       type: object
+ *                       description: Which planets aspect each house/sign
+ *                     summary:
+ *                       type: object
+ *                       description: Summary of aspect rules used
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Bad request - Missing or invalid required fields
+ *       500:
+ *         description: Internal server error - Failed to compute aspects
+ */
+app.post('/api/planetaspects', (req, res) => {
+  const { date, time, lat, lng, timezone } = req.body;
+
+  // Validation
+  if (!date || !time || lat === undefined || lng === undefined || timezone === undefined) {
+    return res.status(400).json({ 
+      error: 'Missing required fields: date (YYYY-MM-DD or DD-MM-YYYY), time (HH:MM:SS), lat, lng, timezone' 
+    });
+  }
+
+  try {
+    // Normalize date format to yyyy-mm-dd
+    const normalizedDate = normalizeDateToYmd(date);
+
+    // Compute birth chart using vedic-astrology
+    const vedicAstrology = require('vedic-astrology');
+    const swisseph = require('swisseph-v2');
+    const birthChart = vedicAstrology.positioner.getBirthChart(normalizedDate, time, lat, lng, timezone);
+
+    // Map Rashi codes to sign numbers (1-12)
+    const rashiToNumber = {
+      'Ar': 1, 'Ta': 2, 'Ge': 3, 'Cn': 4, 'Le': 5, 'Vi': 6,
+      'Li': 7, 'Sc': 8, 'Sg': 9, 'Cp': 10, 'Aq': 11, 'Pi': 12
+    };
+
+    // Helper function to calculate outer planets using swisseph
+    const calculateOuterPlanet = (planetNum, normalizedDate, time, timezone) => {
+      try {
+        const [year, month, day] = normalizedDate.split('-').map(Number);
+        const [hours, minutes, seconds] = time.split(':').map(Number);
+        
+        let utcHours = hours - timezone;
+        let utcDay = day;
+        if (utcHours < 0) {
+          utcHours += 24;
+          utcDay--;
+        } else if (utcHours >= 24) {
+          utcHours -= 24;
+          utcDay++;
+        }
+        
+        const jd = swisseph.swe_julday(year, month, utcDay, utcHours + minutes/60 + seconds/3600, 1);
+        swisseph.swe_set_sid_mode(1);
+        const ayanamsha = swisseph.swe_get_ayanamsa_ut(jd);
+        
+        const result = swisseph.swe_calc_ut(jd, planetNum, 0);
+        const tropicalLong = result.longitude;
+        const siderealLong = tropicalLong - ayanamsha;
+        const normalizedLong = siderealLong < 0 ? siderealLong + 360 : siderealLong;
+        const sign = Math.floor(normalizedLong / 30) + 1;
+        const isRetro = result.longitudeSpeed < 0;
+        
+        return { current_sign: sign, isRetro: String(isRetro) };
+      } catch (error) {
+        return { current_sign: 0, isRetro: "false" };
+      }
+    };
+
+    // Build rashi data for aspect calculation
+    const rashiData = {
+      Ascendant: {
+        current_sign: rashiToNumber[birthChart.meta.La.rashi] || 0,
+        isRetro: String(birthChart.meta.La.isRetrograde || false)
+      },
+      Sun: {
+        current_sign: rashiToNumber[birthChart.meta.Su.rashi] || 0,
+        isRetro: String(birthChart.meta.Su.isRetrograde || false)
+      },
+      Moon: {
+        current_sign: rashiToNumber[birthChart.meta.Mo.rashi] || 0,
+        isRetro: String(birthChart.meta.Mo.isRetrograde || false)
+      },
+      Mars: {
+        current_sign: rashiToNumber[birthChart.meta.Ma.rashi] || 0,
+        isRetro: String(birthChart.meta.Ma.isRetrograde || false)
+      },
+      Mercury: {
+        current_sign: rashiToNumber[birthChart.meta.Me.rashi] || 0,
+        isRetro: String(birthChart.meta.Me.isRetrograde || false)
+      },
+      Jupiter: {
+        current_sign: rashiToNumber[birthChart.meta.Ju.rashi] || 0,
+        isRetro: String(birthChart.meta.Ju.isRetrograde || false)
+      },
+      Venus: {
+        current_sign: rashiToNumber[birthChart.meta.Ve.rashi] || 0,
+        isRetro: String(birthChart.meta.Ve.isRetrograde || false)
+      },
+      Saturn: {
+        current_sign: rashiToNumber[birthChart.meta.Sa.rashi] || 0,
+        isRetro: String(birthChart.meta.Sa.isRetrograde || false)
+      },
+      Rahu: {
+        current_sign: rashiToNumber[birthChart.meta.Ra.rashi] || 0,
+        isRetro: String(birthChart.meta.Ra.isRetrograde || false)
+      },
+      Ketu: {
+        current_sign: rashiToNumber[birthChart.meta.Ke.rashi] || 0,
+        isRetro: String(birthChart.meta.Ke.isRetrograde || false)
+      },
+      Uranus: calculateOuterPlanet(7, normalizedDate, time, timezone),
+      Neptune: calculateOuterPlanet(8, normalizedDate, time, timezone),
+      Pluto: calculateOuterPlanet(9, normalizedDate, time, timezone)
+    };
+
+    // Calculate aspects
+    const aspectData = calculatePlanetAspects(rashiData);
+
+    res.json({
+      success: true,
+      data: aspectData,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error computing planet aspects:', error);
+    res.status(500).json({ error: 'Failed to compute planet aspects' });
   }
 });
 
