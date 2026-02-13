@@ -9,7 +9,7 @@ set -e
 FUNCTION_APP_NAME="${AZURE_FUNCTION_APP_NAME:-rashi-api-function}"
 RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-rashi-api-group}"
 LOCATION="${AZURE_LOCATION:-eastus}"
-NODE_VERSION="24"
+NODE_VERSION="20"
 # Generate a valid storage account name (3-24 chars, lowercase alphanumeric only)
 STORAGE_SUFFIX=$(date +%s | tail -c 5)
 STORAGE_ACCOUNT_NAME="rashi$(echo $STORAGE_SUFFIX | tr '[:upper:]' '[:lower:]')"

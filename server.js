@@ -9,6 +9,8 @@ const { generateVimshottariDasha } = require('./vimshottariService');
 const { computeCompatibility } = require('./compatibilityService');
 const { calculatePlanetAspects } = require('./aspectsService');
 const { normalizeDateToYmd } = require('./utils');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -227,6 +229,11 @@ app.get('/api-docs.json', (req, res) => {
  *           minimum: 1
  *           maximum: 12
  *           description: Zodiac sign number (1=Aries, 2=Taurus, ..., 12=Pisces)
+ *         house_number:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 12
+ *           description: House position (1-12) from Lagna; used for generic predictions
  *         isRetro:
  *           type: string
  *           enum: ["true", "false"]
@@ -264,8 +271,18 @@ app.post('/api/rashi', (req, res) => {
       'Pi': 12  // Pisces
     };
 
+    // Helper function to calculate house number from planet longitude and Lagna (1-12)
+    const calculateHouseNumber = (planetLongitude, lagnaLongitude) => {
+      let diff = planetLongitude - lagnaLongitude;
+      if (diff < 0) diff += 360;
+      const houseNumber = Math.floor(diff / 30) + 1;
+      return houseNumber > 12 ? houseNumber - 12 : houseNumber;
+    };
+
+    const lagnaLongitude = birthChart.meta.La.longitude;
+
     // Helper function to calculate outer planets (Uranus, Neptune, Pluto) using swisseph
-    // These are not provided by vedic-astrology library
+    // These are not provided by vedic-astrology library; returns longitude for house calculation
     const calculateOuterPlanet = (planetNum, normalizedDate, time, timezone) => {
       try {
         // Parse date and time
@@ -300,18 +317,24 @@ app.post('/api/rashi', (req, res) => {
         
         return {
           current_sign: sign,
-          isRetro: String(isRetro)
+          isRetro: String(isRetro),
+          longitude: normalizedLong
         };
       } catch (error) {
         console.error(`Error calculating outer planet ${planetNum}:`, error);
         return {
           current_sign: 0,
-          isRetro: "false"
+          isRetro: "false",
+          longitude: 0
         };
       }
     };
 
-    // Transform data to match rashi.json format
+    const uranusData = calculateOuterPlanet(7, normalizedDate, time, timezone);
+    const neptuneData = calculateOuterPlanet(8, normalizedDate, time, timezone);
+    const plutoData = calculateOuterPlanet(9, normalizedDate, time, timezone);
+
+    // Transform data to match rashi.json format (with house_number for generic predictions)
     const rashiData = {
       Ascendant: {
         current_sign: rashiToNumber[birthChart.meta.La.rashi] || 0,
@@ -319,44 +342,64 @@ app.post('/api/rashi', (req, res) => {
       },
       Sun: {
         current_sign: rashiToNumber[birthChart.meta.Su.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Su.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Su.isRetrograde || false)
       },
       Moon: {
         current_sign: rashiToNumber[birthChart.meta.Mo.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Mo.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Mo.isRetrograde || false)
       },
       Mars: {
         current_sign: rashiToNumber[birthChart.meta.Ma.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Ma.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Ma.isRetrograde || false)
       },
       Mercury: {
         current_sign: rashiToNumber[birthChart.meta.Me.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Me.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Me.isRetrograde || false)
       },
       Jupiter: {
         current_sign: rashiToNumber[birthChart.meta.Ju.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Ju.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Ju.isRetrograde || false)
       },
       Venus: {
         current_sign: rashiToNumber[birthChart.meta.Ve.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Ve.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Ve.isRetrograde || false)
       },
       Saturn: {
         current_sign: rashiToNumber[birthChart.meta.Sa.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Sa.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Sa.isRetrograde || false)
       },
       Rahu: {
         current_sign: rashiToNumber[birthChart.meta.Ra.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Ra.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Ra.isRetrograde || false)
       },
       Ketu: {
         current_sign: rashiToNumber[birthChart.meta.Ke.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Ke.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Ke.isRetrograde || false)
       },
-      // Calculate outer planets using swisseph (Uranus=7, Neptune=8, Pluto=9)
-      Uranus: calculateOuterPlanet(7, normalizedDate, time, timezone),
-      Neptune: calculateOuterPlanet(8, normalizedDate, time, timezone),
-      Pluto: calculateOuterPlanet(9, normalizedDate, time, timezone)
+      Uranus: {
+        current_sign: uranusData.current_sign,
+        house_number: calculateHouseNumber(uranusData.longitude, lagnaLongitude),
+        isRetro: uranusData.isRetro
+      },
+      Neptune: {
+        current_sign: neptuneData.current_sign,
+        house_number: calculateHouseNumber(neptuneData.longitude, lagnaLongitude),
+        isRetro: neptuneData.isRetro
+      },
+      Pluto: {
+        current_sign: plutoData.current_sign,
+        house_number: calculateHouseNumber(plutoData.longitude, lagnaLongitude),
+        isRetro: plutoData.isRetro
+      }
     };
 
     res.json({
@@ -1073,6 +1116,44 @@ app.post('/api/horoscope', (req, res) => {
   } catch (error) {
     console.error('Error generating horoscope:', error);
     res.status(500).json({ error: 'Failed to generate horoscope chart' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/generic-predictions:
+ *   get:
+ *     summary: Get generic prediction data (planet-in-house and house-by-rashi)
+ *     description: Returns static JSON from data/planet.json and data/house.json for building generic predictions by lookup. planetInHouse keys = planet names then house "1".."12"; houseByRashi keys = house "1".."12" then rashi "1".."12".
+ *     tags: [Rashi]
+ *     responses:
+ *       200:
+ *         description: Generic prediction data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 planetInHouse:
+ *                   type: object
+ *                   description: Planet name -> house number "1".."12" -> text block
+ *                 houseByRashi:
+ *                   type: object
+ *                   description: House "1".."12" -> rashi "1".."12" -> text block
+ *       500:
+ *         description: Error reading data files
+ */
+app.get('/api/generic-predictions', (req, res) => {
+  try {
+    const dataDir = path.join(__dirname, 'data');
+    const planetPath = path.join(dataDir, 'planet.json');
+    const housePath = path.join(dataDir, 'house.json');
+    const planetInHouse = JSON.parse(fs.readFileSync(planetPath, 'utf8'));
+    const houseByRashi = JSON.parse(fs.readFileSync(housePath, 'utf8'));
+    res.json({ planetInHouse, houseByRashi });
+  } catch (err) {
+    console.error('Error serving generic-predictions:', err);
+    res.status(500).json({ error: 'Failed to load generic prediction data' });
   }
 });
 

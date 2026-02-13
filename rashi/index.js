@@ -37,15 +37,22 @@ module.exports = async function (context, req) {
       'Pi': 12  // Pisces
     };
 
+    // Helper function to calculate house number from planet longitude and Lagna (1-12)
+    const calculateHouseNumber = (planetLongitude, lagnaLongitude) => {
+      let diff = planetLongitude - lagnaLongitude;
+      if (diff < 0) diff += 360;
+      const houseNumber = Math.floor(diff / 30) + 1;
+      return houseNumber > 12 ? houseNumber - 12 : houseNumber;
+    };
+
+    const lagnaLongitude = birthChart.meta.La.longitude;
+
     // Helper function to calculate outer planets (Uranus, Neptune, Pluto) using swisseph
-    // These are not provided by vedic-astrology library
+    // Returns longitude for house calculation; not provided by vedic-astrology
     const calculateOuterPlanet = (planetNum, normalizedDate, time, timezone) => {
       try {
-        // Parse date and time
         const [year, month, day] = normalizedDate.split('-').map(Number);
         const [hours, minutes, seconds] = time.split(':').map(Number);
-        
-        // Convert to UTC (subtract timezone)
         let utcHours = hours - timezone;
         let utcDay = day;
         if (utcHours < 0) {
@@ -55,36 +62,31 @@ module.exports = async function (context, req) {
           utcHours -= 24;
           utcDay++;
         }
-        
-        // Calculate Julian Day
         const jd = swisseph.swe_julday(year, month, utcDay, utcHours + minutes/60 + seconds/3600, 1);
-        
-        // Set sidereal mode to Lahiri (same as vedic-astrology)
-        swisseph.swe_set_sid_mode(1); // 1 = SE_SIDM_LAHIRI
+        swisseph.swe_set_sid_mode(1);
         const ayanamsha = swisseph.swe_get_ayanamsa_ut(jd);
-        
-        // Calculate planet position
         const result = swisseph.swe_calc_ut(jd, planetNum, 0);
         const tropicalLong = result.longitude;
         const siderealLong = tropicalLong - ayanamsha;
         const normalizedLong = siderealLong < 0 ? siderealLong + 360 : siderealLong;
         const sign = Math.floor(normalizedLong / 30) + 1;
         const isRetro = result.longitudeSpeed < 0;
-        
         return {
           current_sign: sign,
-          isRetro: String(isRetro)
+          isRetro: String(isRetro),
+          longitude: normalizedLong
         };
       } catch (error) {
         context.log(`Error calculating outer planet ${planetNum}:`, error);
-        return {
-          current_sign: 0,
-          isRetro: "false"
-        };
+        return { current_sign: 0, isRetro: "false", longitude: 0 };
       }
     };
 
-    // Transform data to match rashi.json format
+    const uranusData = calculateOuterPlanet(7, normalizedDate, time, timezone);
+    const neptuneData = calculateOuterPlanet(8, normalizedDate, time, timezone);
+    const plutoData = calculateOuterPlanet(9, normalizedDate, time, timezone);
+
+    // Transform data to match rashi.json format (with house_number for generic predictions)
     const rashiData = {
       Ascendant: {
         current_sign: rashiToNumber[birthChart.meta.La.rashi] || 0,
@@ -92,44 +94,64 @@ module.exports = async function (context, req) {
       },
       Sun: {
         current_sign: rashiToNumber[birthChart.meta.Su.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Su.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Su.isRetrograde || false)
       },
       Moon: {
         current_sign: rashiToNumber[birthChart.meta.Mo.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Mo.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Mo.isRetrograde || false)
       },
       Mars: {
         current_sign: rashiToNumber[birthChart.meta.Ma.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Ma.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Ma.isRetrograde || false)
       },
       Mercury: {
         current_sign: rashiToNumber[birthChart.meta.Me.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Me.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Me.isRetrograde || false)
       },
       Jupiter: {
         current_sign: rashiToNumber[birthChart.meta.Ju.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Ju.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Ju.isRetrograde || false)
       },
       Venus: {
         current_sign: rashiToNumber[birthChart.meta.Ve.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Ve.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Ve.isRetrograde || false)
       },
       Saturn: {
         current_sign: rashiToNumber[birthChart.meta.Sa.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Sa.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Sa.isRetrograde || false)
       },
       Rahu: {
         current_sign: rashiToNumber[birthChart.meta.Ra.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Ra.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Ra.isRetrograde || false)
       },
       Ketu: {
         current_sign: rashiToNumber[birthChart.meta.Ke.rashi] || 0,
+        house_number: calculateHouseNumber(birthChart.meta.Ke.longitude, lagnaLongitude),
         isRetro: String(birthChart.meta.Ke.isRetrograde || false)
       },
-      // Calculate outer planets using swisseph (Uranus=7, Neptune=8, Pluto=9)
-      Uranus: calculateOuterPlanet(7, normalizedDate, time, timezone),
-      Neptune: calculateOuterPlanet(8, normalizedDate, time, timezone),
-      Pluto: calculateOuterPlanet(9, normalizedDate, time, timezone)
+      Uranus: {
+        current_sign: uranusData.current_sign,
+        house_number: calculateHouseNumber(uranusData.longitude, lagnaLongitude),
+        isRetro: uranusData.isRetro
+      },
+      Neptune: {
+        current_sign: neptuneData.current_sign,
+        house_number: calculateHouseNumber(neptuneData.longitude, lagnaLongitude),
+        isRetro: neptuneData.isRetro
+      },
+      Pluto: {
+        current_sign: plutoData.current_sign,
+        house_number: calculateHouseNumber(plutoData.longitude, lagnaLongitude),
+        isRetro: plutoData.isRetro
+      }
     };
 
     context.res = {

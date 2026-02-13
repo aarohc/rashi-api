@@ -1,6 +1,6 @@
 # Azure Functions Deployment Guide for rashi-api
 
-This guide explains how to deploy the rashi-api as Azure Functions.
+This guide explains how to deploy the rashi-api as Azure Functions. For a **step-by-step deployment plan** (prerequisites, options, post-deploy, troubleshooting), see **[DEPLOYMENT_PLAN.md](./DEPLOYMENT_PLAN.md)**.
 
 ## Prerequisites
 
