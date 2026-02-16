@@ -26,7 +26,7 @@ Deploy rashi-api to Azure as an Azure Functions app so cosmicconnect-api (and ot
 | **Azure subscription** | [Azure Portal](https://portal.azure.com) → Subscriptions |
 | **Azure CLI** | `az --version`; install: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli |
 | **Logged in** | `az login` and `az account set --subscription <id>` if you have multiple |
-| **Node.js** | Local: Node 24+ (for `func` tools and optional zip). Azure Function App uses Node 24. |
+| **Node.js** | Local: Node 22+ (for `func` tools and optional zip). Azure Function App uses Node 22. |
 | **Azure Functions Core Tools** (for Option A) | `func --version` (v4). Install: `npm install -g azure-functions-core-tools@4 --unsafe-perm true` |
 | **zip** (for Option B only) | `zip --version` (for CLI-only deploy) |
 
@@ -99,13 +99,13 @@ If you prefer to create resources by hand (or the script fails partway), use the
    ```
    Use a globally unique name (e.g. `rashiapi<random>`).
 
-3. **Function App** (Node 24, Linux, Consumption)
+3. **Function App** (Node 22, Linux, Consumption)
    ```bash
    az functionapp create \
      --resource-group rashi-api-group \
      --consumption-plan-location eastus \
      --runtime node \
-     --runtime-version ~24 \
+     --runtime-version 22 \
      --functions-version 4 \
      --name rashi-api-function \
      --storage-account <your-storage-name> \
@@ -122,10 +122,10 @@ If you prefer to create resources by hand (or the script fails partway), use the
 
 ## 5. Node Version (Important)
 
-- **Local repo**: `.nvmrc` / `package.json` may require Node 24.
-- **Azure Functions**: Use **Node 24** (LTS). The deploy scripts are set to use Node 24 for the Function App.
-- If `package.json` has a **preinstall** that enforces Node 24, it will fail on Azure when the remote build runs. Options:
-  - **Recommended**: Ensure Node 24 is set in Azure (`WEBSITE_NODE_DEFAULT_VERSION` = `~24`), or
+- **Local repo**: `.nvmrc` / `package.json` may require Node 22.
+- **Azure Functions**: Use **Node 22**. The deploy scripts are set to use Node 22 for the Function App.
+- If `package.json` has a **preinstall** that enforces Node 22, it will fail on Azure when the remote build runs. Options:
+  - **Recommended**: Ensure Node 22 is set in Azure (`WEBSITE_NODE_DEFAULT_VERSION` = `22`), or
   - Remove the preinstall for the deployment path only (e.g. via an env var or a separate `package.json` script for Azure).
 
 ---
@@ -176,7 +176,7 @@ curl -X POST https://<your-function-app-host>/api/rashi \
 |-------|------------|
 | **403 / Not logged in** | `az login` and `az account set --subscription <id>` |
 | **Native module (swisseph-v2) fails** | Use **Option A** (`deploy.sh` with `func ... publish --node`) so npm install runs on Azure (Linux). |
-| **Node version error on Azure** | Set Function App to Node 24: App settings → `WEBSITE_NODE_DEFAULT_VERSION` = `~24`. |
+| **Node version error on Azure** | Set Function App to Node 22: App settings → `WEBSITE_NODE_DEFAULT_VERSION` = `22`. |
 | **Zip deploy: wrong platform** | Don’t zip `node_modules` from macOS/Windows; use Option A or enable build-on-deploy so Azure runs `npm install`. |
 | **Timeout** | Increase in `host.json` (`functionTimeout`). For heavy use, consider Premium or Dedicated plan. |
 | **"Error creating a Blob container reference" / AzureWebJobsStorage invalid** | The Function App's storage connection string is invalid (e.g. keys rotated, storage recreated). Run `./fix-storage.sh` to refresh it from the storage account in the same resource group. Or manually: Azure Portal → Function App → Configuration → Application settings → `AzureWebJobsStorage` → set to the storage account's connection string (Storage Account → Access keys → Connection string). |
@@ -191,6 +191,6 @@ curl -X POST https://<your-function-app-host>/api/rashi \
 - [ ] Note the printed Function App URL
 - [ ] Set `RASHI_API_URL` in cosmicconnect-api (Azure app settings or .env)
 - [ ] Test `GET /api/health` and one `POST` (e.g. `/api/rashi`)
-- [ ] (If needed) Verify Node 24 is supported in your Azure region
+- [ ] (If needed) Verify Node 22 is supported in your Azure region
 
 After this, rashi-api is deployed on Azure and cosmicconnect-api can call it via `RASHI_API_URL`.

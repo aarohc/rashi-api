@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "engines": {
-    "node": ">=24.0.0",
-    "npm": ">=10.0.0"
+    "node": ">=22.0.0",
+    "npm": ">=9.0.0"
   },
   "scripts": {
-    "preinstall": "node -e \"var m=parseInt(process.versions.node.split('.')[0],10);if(m<24){console.error('❌ Node.js 24+ required. Current:', process.version);process.exit(1)}\"",
+    "preinstall": "node -e \"var m=parseInt(process.versions.node.split('.')[0],10);if(m<22){console.error('❌ Node.js 22+ required. Current:', process.version);process.exit(1)}\"",
     "setup": "bash setup.sh",
     "test": "jest",
     "test:watch": "jest --watch",

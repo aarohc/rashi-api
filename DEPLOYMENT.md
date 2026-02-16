@@ -9,6 +9,7 @@ This guide explains how to deploy the rashi-api as Azure Functions. For a **step
 | **GitHub Actions** | Automated CI/CD on push to `main` (see [GitHub Actions](#github-actions-ci-cd) below) |
 | **Manual (deploy.sh)** | First-time setup or when Function App doesn't exist yet |
 | **Manual (func publish)** | Quick deploy after code changes |
+| **destroy.sh** | When stuck with 500 errors—delete everything and run `./deploy.sh` for a clean deploy |
 
 ## GitHub Actions (CI/CD)
 
@@ -16,7 +17,7 @@ A workflow at `.github/workflows/azure-functions-rashi-api.yml` deploys rashi-ap
 
 **First-time setup:**
 1. Ensure the Function App `rashi-api-function` exists (run `./deploy.sh` once if not).
-2. In Azure Portal → Function App → Configuration → Application settings → set `WEBSITE_NODE_DEFAULT_VERSION` = `~24` (for Node 24).
+2. In Azure Portal → Function App → Configuration → Application settings → set `WEBSITE_NODE_DEFAULT_VERSION` = `22` (Node 22).
 3. In Azure Portal → Function App → Overview → **Get publish profile**; copy the XML.
 4. In GitHub → Repository Settings → Secrets → Actions → add secret:
    - Name: `AZURE_FUNCTIONAPP_RASHI_PUBLISH_PROFILE`
@@ -37,7 +38,7 @@ After that, pushes to `main` will deploy automatically.
    npm install -g azure-functions-core-tools@4 --unsafe-perm true
    ```
 
-3. **Node.js 24** (Azure Functions v4 supports Node.js 18, 20, 22, 24)
+3. **Node.js 22** (Azure Functions v4 supports Node.js 18, 20, 22)
 
 ## Deployment Steps
 
@@ -77,7 +78,7 @@ After that, pushes to `main` will deploy automatically.
      --resource-group rashi-api-group \
      --consumption-plan-location eastus \
      --runtime node \
-     --runtime-version ~24 \
+     --runtime-version 22 \
      --functions-version 4 \
      --name rashi-api-function \
      --storage-account rashi-api-storage \
@@ -86,7 +87,7 @@ After that, pushes to `main` will deploy automatically.
 
 4. **Deploy the Function Code**:
    ```bash
-   func azure functionapp publish rashi-api-function --node
+   func azure functionapp publish rashi-api-function --node --build remote
    ```
 
 ## Configuration
@@ -157,7 +158,7 @@ The `AzureWebJobsStorage` connection string in the Function App is invalid. Run:
 chmod +x fix-storage.sh
 ./fix-storage.sh
 ```
-Then retry: `func azure functionapp publish rashi-api-function --node`
+Then retry: `func azure functionapp publish rashi-api-function --node --build remote`
 
 Alternatively, update it manually in Azure Portal: Function App → Configuration → Application settings → `AzureWebJobsStorage` → set to your storage account's connection string (from Storage Account → Access keys).
 

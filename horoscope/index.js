@@ -1,7 +1,8 @@
-const vedicAstrology = require('vedic-astrology');
+// Lazy-load vedic-astrology (may pull native deps) so worker can start without loading all functions
 const { generateHoroscopeSVG } = require('../horoscopeGenerator');
 
 module.exports = async function (context, req) {
+  const vedicAstrology = require('vedic-astrology');
   const { date, time, lat, lng, timezone, size, chartType } = req.body;
 
   // Validation

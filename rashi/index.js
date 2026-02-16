@@ -1,8 +1,10 @@
-const vedicAstrology = require('vedic-astrology');
-const swisseph = require('swisseph-v2');
+// Lazy-load to avoid worker crash: swisseph-v2 is native; loading at startup fails and breaks ALL functions
 const { normalizeDateToYmd } = require('../utils');
 
 module.exports = async function (context, req) {
+  const vedicAstrology = require('vedic-astrology');
+  const swisseph = require('swisseph-v2');
+
   const { date, time, lat, lng, timezone } = req.body;
 
   // Validation

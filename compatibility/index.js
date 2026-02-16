@@ -1,6 +1,6 @@
-const { computeCompatibility } = require('../compatibilityService');
-
+// Lazy-load compatibilityService (pulls vedic-astrology) so worker can start
 module.exports = async function (context, req) {
+  const { computeCompatibility } = require('../compatibilityService');
   const { person1, person2, threshold } = req.body || {};
 
   if (!person1 || !person2) {

@@ -16,22 +16,22 @@ This microservice calculates Vedic astrology Rashi positions for all planets bas
 
 ## Installation
 
-**Important:** This project requires Node.js 24.11.1. Make sure you're using Node.js 24.11.1 before installing.
+**Important:** This project requires Node.js 22+. Make sure you're using Node.js 22+ before installing.
 
 ```bash
 # Check Node version
-node --version  # Should be v24.11.1
+node --version  # Should be v22.x or higher
 
-# If not using Node 24.11.1, switch to it:
-nvm use 24.11.1
+# If not using Node 22+, switch to it:
+nvm use 22
 # Or install it:
-nvm install 24.11.1
-nvm alias default 24.11.1
+nvm install 22
+nvm alias default 22
 
 # Install dependencies
 npm install
 
-# Or use the setup script (automatically uses Node 24.11.1)
+# Or use the setup script
 npm run setup
 ```
 

@@ -9,7 +9,7 @@ set -e
 FUNCTION_APP_NAME="${AZURE_FUNCTION_APP_NAME:-rashi-api-function}"
 RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-rashi-api-group}"
 LOCATION="${AZURE_LOCATION:-eastus}"
-NODE_VERSION="24"
+NODE_VERSION="22"
 # Generate a valid storage account name (3-24 chars, lowercase alphanumeric only)
 STORAGE_SUFFIX=$(date +%s | tail -c 5)
 STORAGE_ACCOUNT_NAME="rashi$(echo $STORAGE_SUFFIX | tr '[:upper:]' '[:lower:]')"
@@ -125,17 +125,53 @@ FUNCTION_APP_URL=$(az functionapp show \
     --query defaultHostName \
     --output tsv)
 
+BASE_URL="https://${FUNCTION_APP_URL}"
+
 echo ""
-echo "✅ Deployment complete!"
-echo "🌐 Function App URL: https://${FUNCTION_APP_URL}"
+echo "⏳ Waiting 30s for deployment to be live..."
+sleep 30
+
+# Verify health endpoint
+echo ""
+echo "🔍 Verifying /api/health..."
+HEALTH_RESPONSE=$(curl -s -w "\n%{http_code}" "${BASE_URL}/api/health")
+HEALTH_CODE=$(echo "$HEALTH_RESPONSE" | tail -n1)
+HEALTH_BODY=$(echo "$HEALTH_RESPONSE" | sed '$d')
+if [ "$HEALTH_CODE" != "200" ]; then
+    echo "❌ Health check failed: HTTP $HEALTH_CODE"
+    echo "Response: $HEALTH_BODY"
+    exit 1
+fi
+echo "✓ Health OK (HTTP $HEALTH_CODE)"
+
+# Verify generic-predictions endpoint
+echo "🔍 Verifying /api/generic-predictions..."
+GENERIC_RESPONSE=$(curl -s -w "\n%{http_code}" "${BASE_URL}/api/generic-predictions")
+GENERIC_CODE=$(echo "$GENERIC_RESPONSE" | tail -n1)
+GENERIC_BODY=$(echo "$GENERIC_RESPONSE" | sed '$d')
+if [ "$GENERIC_CODE" != "200" ]; then
+    echo "❌ generic-predictions failed: HTTP $GENERIC_CODE"
+    echo "Response: $(echo "$GENERIC_BODY" | head -c 500)"
+    exit 1
+fi
+if ! echo "$GENERIC_BODY" | grep -q '"planetInHouse"'; then
+    echo "❌ generic-predictions response missing planetInHouse"
+    echo "Response: $(echo "$GENERIC_BODY" | head -c 500)"
+    exit 1
+fi
+echo "✓ generic-predictions OK (HTTP $GENERIC_CODE)"
+
+echo ""
+echo "✅ Deployment and verification complete!"
+echo "🌐 Function App URL: ${BASE_URL}"
 echo ""
 echo "📝 Available endpoints:"
-echo "   - GET  https://${FUNCTION_APP_URL}/api/health"
-echo "   - GET  https://${FUNCTION_APP_URL}/api/generic-predictions"
-echo "   - POST https://${FUNCTION_APP_URL}/api/rashi"
-echo "   - POST https://${FUNCTION_APP_URL}/api/vimshottari"
-echo "   - POST https://${FUNCTION_APP_URL}/api/compatibility"
-echo "   - POST https://${FUNCTION_APP_URL}/api/horoscope"
+echo "   - GET  ${BASE_URL}/api/health"
+echo "   - GET  ${BASE_URL}/api/generic-predictions"
+echo "   - POST ${BASE_URL}/api/rashi"
+echo "   - POST ${BASE_URL}/api/vimshottari"
+echo "   - POST ${BASE_URL}/api/compatibility"
+echo "   - POST ${BASE_URL}/api/horoscope"
 echo ""
-echo "💡 Update RASHI_API_URL in cosmicconnect-api to: https://${FUNCTION_APP_URL}"
+echo "💡 Update RASHI_API_URL in cosmicconnect-api to: ${BASE_URL}"
 

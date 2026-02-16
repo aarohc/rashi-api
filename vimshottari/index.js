@@ -1,7 +1,8 @@
-const { generateVimshottariDasha } = require('../vimshottariService');
+// Lazy-load vimshottariService (pulls vedic-astrology) so worker can start
 const { normalizeDateToYmd } = require('../utils');
 
 module.exports = async function (context, req) {
+  const { generateVimshottariDasha } = require('../vimshottariService');
   const { date, time, lat, lng, timezone, maxYears } = req.body;
 
   if (!date || !time || lat === undefined || lng === undefined || timezone === undefined) {
