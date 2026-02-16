@@ -8,7 +8,7 @@
       "methods": [
         "post"
       ],
-      "route": "api/horoscope"
+      "route": "horoscope"
     },
     {
       "type": "http",

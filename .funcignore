@@ -1,3 +1,4 @@
+# CRITICAL: data/ folder MUST be deployed - do not add "data" here
 *.js.map
 *.ts
 .git*

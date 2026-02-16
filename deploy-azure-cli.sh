@@ -9,7 +9,7 @@ set -e
 FUNCTION_APP_NAME="${AZURE_FUNCTION_APP_NAME:-rashi-api-function}"
 RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-rashi-api-group}"
 LOCATION="${AZURE_LOCATION:-eastus}"
-NODE_VERSION="20"
+NODE_VERSION="24"
 # Generate a valid storage account name (3-24 chars, lowercase alphanumeric only)
 STORAGE_SUFFIX=$(date +%s | tail -c 5)
 STORAGE_ACCOUNT_NAME="rashi$(echo $STORAGE_SUFFIX | tr '[:upper:]' '[:lower:]')"
@@ -130,11 +130,12 @@ echo "✅ Deployment complete!"
 echo "🌐 Function App URL: https://${FUNCTION_APP_URL}"
 echo ""
 echo "📝 Available endpoints:"
+echo "   - GET  https://${FUNCTION_APP_URL}/api/health"
+echo "   - GET  https://${FUNCTION_APP_URL}/api/generic-predictions"
 echo "   - POST https://${FUNCTION_APP_URL}/api/rashi"
 echo "   - POST https://${FUNCTION_APP_URL}/api/vimshottari"
 echo "   - POST https://${FUNCTION_APP_URL}/api/compatibility"
 echo "   - POST https://${FUNCTION_APP_URL}/api/horoscope"
-echo "   - GET  https://${FUNCTION_APP_URL}/api/health"
 echo ""
 echo "💡 Update RASHI_API_URL in cosmicconnect-api to: https://${FUNCTION_APP_URL}"
 
