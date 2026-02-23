@@ -105,6 +105,7 @@ Once deployed, the following endpoints will be available:
 - `GET /api/generic-predictions` - Generic prediction data (planet + house JSON)
 - `POST /api/rashi` - Calculate Rashi positions
 - `POST /api/vimshottari` - Calculate Vimshottari dasha
+- `POST /api/pratyadasha` - Pratyadasha segments for a given year (9 segments)
 - `POST /api/compatibility` - Calculate compatibility
 - `POST /api/horoscope` - Generate horoscope SVG
 

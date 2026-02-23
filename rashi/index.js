@@ -1,11 +1,25 @@
 // Lazy-load to avoid worker crash: swisseph-v2 is native; loading at startup fails and breaks ALL functions
 const { normalizeDateToYmd } = require('../utils');
 
+function parseBody(raw) {
+  if (raw == null) return {};
+  if (typeof raw === 'object') return raw;
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw);
+    } catch (e) {
+      return {};
+    }
+  }
+  return {};
+}
+
 module.exports = async function (context, req) {
   const vedicAstrology = require('vedic-astrology');
   const swisseph = require('swisseph-v2');
 
-  const { date, time, lat, lng, timezone } = req.body;
+  const body = parseBody(req.body);
+  const { date, time, lat, lng, timezone } = body;
 
   // Validation
   if (!date || !time || lat === undefined || lng === undefined || timezone === undefined) {

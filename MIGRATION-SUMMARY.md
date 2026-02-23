@@ -6,6 +6,7 @@
 - Created 5 Azure Functions to replace Express routes:
   - `rashi` - POST /api/rashi
   - `vimshottari` - POST /api/vimshottari
+  - `pratyadasha` - POST /api/pratyadasha
   - `compatibility` - POST /api/compatibility
   - `horoscope` - POST /api/horoscope
   - `health` - GET /api/health
@@ -43,6 +44,7 @@ rashi-api/
 │   ├── function.json
 │   └── index.js
 ├── vimshottari/                        # Vimshottari dasha function
+├── pratyadasha/                        # Pratyadasha-for-year function
 │   ├── function.json
 │   └── index.js
 ├── compatibility/                     # Compatibility function

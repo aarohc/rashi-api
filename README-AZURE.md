@@ -44,6 +44,7 @@ curl -X POST https://rashi-api-function.azurewebsites.net/api/rashi \
 
 - `POST /api/rashi` - Calculate Rashi positions
 - `POST /api/vimshottari` - Calculate Vimshottari dasha
+- `POST /api/pratyadasha` - Pratyadasha segments for a given year
 - `POST /api/compatibility` - Calculate compatibility
 - `POST /api/horoscope` - Generate horoscope SVG
 - `GET /api/health` - Health check

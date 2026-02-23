@@ -1,4 +1,6 @@
 # CRITICAL: data/ folder MUST be deployed - do not add "data" here
+# Exclude node_modules so Azure runs npm install on server (avoids rsync symlink errors in node_modules/.bin)
+node_modules
 *.js.map
 *.ts
 .git*

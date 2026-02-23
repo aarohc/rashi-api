@@ -14,6 +14,7 @@ Deploy rashi-api to Azure as an Azure Functions app so cosmicconnect-api (and ot
   - `GET  /api/generic-predictions` – generic prediction data (planet.json + house.json)
   - `POST /api/rashi` – Rashi positions
   - `POST /api/vimshottari` – Vimshottari dasha
+  - `POST /api/pratyadasha` – Pratyadasha segments for a given year
   - `POST /api/compatibility` – compatibility
   - `POST /api/horoscope` – horoscope SVG
 

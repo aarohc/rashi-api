@@ -5,7 +5,7 @@ const swaggerUi = require('swagger-ui-express');
 const vedicAstrology = require('vedic-astrology');
 const swisseph = require('swisseph-v2');
 const { generateHoroscopeSVG } = require('./horoscopeGenerator');
-const { generateVimshottariDasha } = require('./vimshottariService');
+const { generateVimshottariDasha, getPratyadashaForYear } = require('./vimshottariService');
 const { computeCompatibility } = require('./compatibilityService');
 const { calculatePlanetAspects } = require('./aspectsService');
 const { normalizeDateToYmd } = require('./utils');
@@ -560,6 +560,146 @@ app.post('/api/vimshottari', (req, res) => {
   } catch (error) {
     console.error('Error computing Vimshottari dasha:', error);
     res.status(500).json({ error: 'Failed to compute Vimshottari dasha' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/pratyadasha:
+ *   post:
+ *     summary: Get Pratyadasha segments for a given year
+ *     description: Returns the pratyantardasha (pratyadasha) segments that fall within the specified birth year (birthday-to-birthday), based on birth chart. The year runs from the native's birthday in that year to the day before their next birthday. Each antardasha is divided into 9 pratyadashas in Vimshottari order; segments overlapping the birth year are returned in chronological order.
+ *     tags: [Vimshottari]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - date
+ *               - time
+ *               - lat
+ *               - lng
+ *               - timezone
+ *               - year
+ *             properties:
+ *               date:
+ *                 type: string
+ *                 format: date
+ *                 example: "1979-09-05"
+ *                 description: Birth date in yyyy-mm-dd format (or dd-mm-yyyy will be auto-converted)
+ *               time:
+ *                 type: string
+ *                 format: time
+ *                 example: "19:35:00"
+ *                 description: Birth time in HH:MM:SS format (24-hour)
+ *               lat:
+ *                 type: number
+ *                 format: float
+ *                 example: 21.1702
+ *                 description: Latitude of birth place (decimal degrees)
+ *               lng:
+ *                 type: number
+ *                 format: float
+ *                 example: 72.8311
+ *                 description: Longitude of birth place (decimal degrees)
+ *               timezone:
+ *                 type: number
+ *                 format: float
+ *                 example: 5.5
+ *                 description: Timezone offset in hours (e.g., 5.5 for IST, -5 for EST)
+ *               year:
+ *                 type: integer
+ *                 example: 2025
+ *                 description: Birth year (e.g. 2025 = from birthday in 2025 to next birthday)
+ *     responses:
+ *       200:
+ *         description: Pratyadasha segments for the given year
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     year:
+ *                       type: integer
+ *                       example: 2025
+ *                     pratyadashaSegments:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           mahaLord:
+ *                             type: string
+ *                             description: Mahadasha lord
+ *                           antarLord:
+ *                             type: string
+ *                             description: Antardasha lord
+ *                           pratyadashaLord:
+ *                             type: string
+ *                             description: Pratyantardasha lord
+ *                           start:
+ *                             type: string
+ *                             format: date-time
+ *                           end:
+ *                             type: string
+ *                             format: date-time
+ *                           days:
+ *                             type: number
+ *                             description: Approximate length of segment in days within the year
+ *       400:
+ *         description: Bad request - Missing or invalid required fields
+ *       500:
+ *         description: Internal server error - Failed to compute pratyadasha
+ */
+app.post('/api/pratyadasha', (req, res) => {
+  const { date, time, lat, lng, timezone, year } = req.body;
+
+  if (!date || !time || lat === undefined || lng === undefined || timezone === undefined || year === undefined) {
+    return res.status(400).json({
+      error: 'Missing required fields: date (YYYY-MM-DD or DD-MM-YYYY), time (HH:MM:SS), lat, lng, timezone, year'
+    });
+  }
+
+  const yearNum = typeof year === 'string' ? parseInt(year, 10) : year;
+  if (Number.isNaN(yearNum) || yearNum < 1900 || yearNum > 2100) {
+    return res.status(400).json({
+      error: 'Invalid year: must be an integer between 1900 and 2100'
+    });
+  }
+
+  try {
+    let normalizedDate = date;
+    const ddmmyyyyPattern = /^(\d{2})-(\d{2})-(\d{4})$/;
+    const match = date.match(ddmmyyyyPattern);
+    if (match) {
+      const [, day, month, yearPart] = match;
+      normalizedDate = `${yearPart}-${month}-${day}`;
+    }
+
+    const pratyadashaData = getPratyadashaForYear(
+      normalizedDate,
+      time,
+      lat,
+      lng,
+      timezone,
+      yearNum
+    );
+
+    res.json({
+      success: true,
+      data: pratyadashaData,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error computing pratyadasha:', error);
+    res.status(500).json({ error: 'Failed to compute pratyadasha' });
   }
 });
 
@@ -1126,6 +1266,14 @@ app.post('/api/horoscope', (req, res) => {
  *     summary: Get generic prediction data (planet-in-house and house-by-rashi)
  *     description: Returns static JSON from data/planet.json and data/house.json for building generic predictions by lookup. planetInHouse keys = planet names then house "1".."12"; houseByRashi keys = house "1".."12" then rashi "1".."12".
  *     tags: [Rashi]
+ *     parameters:
+ *       - in: query
+ *         name: locale
+ *         schema:
+ *           type: string
+ *           enum: [en, es, gu, hi]
+ *           default: en
+ *         description: Language for generic content (en=English, es=Spanish, gu=Gujarati, hi=Hindi)
  *     responses:
  *       200:
  *         description: Generic prediction data
@@ -1143,18 +1291,36 @@ app.post('/api/horoscope', (req, res) => {
  *       500:
  *         description: Error reading data files
  */
+const SUPPORTED_LOCALES = ['en', 'es', 'gu', 'hi'];
+function getGenericPredictionsDataDir(baseDataDir, locale) {
+  const normalized = (locale && String(locale).toLowerCase()) || 'en';
+  const chosen = SUPPORTED_LOCALES.includes(normalized) ? normalized : 'en';
+  const localeDir = path.join(baseDataDir, chosen);
+  if (fs.existsSync(localeDir)) return localeDir;
+  return baseDataDir;
+}
+function readJsonIfExists(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
 app.get('/api/generic-predictions', (req, res) => {
   try {
-    const dataDir = path.join(__dirname, 'data');
-    const planetPath = path.join(dataDir, 'planet.json');
-    const housePath = path.join(dataDir, 'house.json');
-    const dashaGenericPath = path.join(dataDir, 'dasha-generic.json');
-    const dashaMahaPath = path.join(dataDir, 'dasha-maha.json');
-    const planetInHouse = JSON.parse(fs.readFileSync(planetPath, 'utf8'));
-    const houseByRashi = JSON.parse(fs.readFileSync(housePath, 'utf8'));
-    const dashaGeneric = JSON.parse(fs.readFileSync(dashaGenericPath, 'utf8'));
-    const dashaMaha = JSON.parse(fs.readFileSync(dashaMahaPath, 'utf8'));
-    res.json({ planetInHouse, houseByRashi, dashaGeneric, dashaMaha });
+    const baseDataDir = path.join(__dirname, 'data');
+    const locale = (req.query.locale && String(req.query.locale).toLowerCase()) || 'en';
+    const dataDir = getGenericPredictionsDataDir(baseDataDir, locale);
+    const enDir = locale === 'en' ? dataDir : getGenericPredictionsDataDir(baseDataDir, 'en');
+    const files = ['planet.json', 'house.json', 'dasha-generic.json', 'dasha-maha.json', 'pratyadasha-generic.json'];
+    const keys = ['planetInHouse', 'houseByRashi', 'dashaGeneric', 'dashaMaha', 'pratyadashaGeneric'];
+    const out = {};
+    for (let i = 0; i < files.length; i++) {
+      let data = readJsonIfExists(path.join(dataDir, files[i]));
+      if (data == null && dataDir !== enDir) data = readJsonIfExists(path.join(enDir, files[i]));
+      if (data == null) {
+        return res.status(500).json({ error: 'Failed to load generic prediction data', missing: files[i] });
+      }
+      out[keys[i]] = data;
+    }
+    res.json(out);
   } catch (err) {
     console.error('Error serving generic-predictions:', err);
     res.status(500).json({ error: 'Failed to load generic prediction data' });

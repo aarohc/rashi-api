@@ -166,8 +166,113 @@ function generateVimshottariDasha(
   };
 }
 
+/**
+ * Get all pratyantardasha (pratyadasha) segments that fall within a given birth year.
+ * Birth year = from the native's birthday in that year to the day before their next birthday.
+ * Each antardasha is divided into 9 pratyadashas in Vimshottari order; this returns
+ * every such segment that overlaps the birth year (typically 9 segments, or more if the
+ * birth year spans an antardasha boundary).
+ *
+ * @param {string} normalizedDate - Birth date yyyy-mm-dd
+ * @param {string} time - Birth time HH:MM:SS
+ * @param {number} lat - Birth latitude
+ * @param {number} lng - Birth longitude
+ * @param {number} timezone - Birth timezone offset (hours)
+ * @param {number} year - Birth year (e.g. 2025 = from birthday in 2025 to next birthday)
+ * @returns {{ year: number, pratyadashaSegments: Array<{ mahaLord, antarLord, pratyadashaLord, start, end, days }> }}
+ */
+function getPratyadashaForYear(normalizedDate, time, lat, lng, timezone, year) {
+  // Birth-year boundaries: birthday in year (inclusive start) to birthday in year+1 (exclusive end)
+  const [birthY, birthM, birthD] = normalizedDate.split('-').map(Number);
+  const yearStart = toUtcDate(
+    `${year}-${String(birthM).padStart(2, '0')}-${String(birthD).padStart(2, '0')}`,
+    '00:00:00',
+    timezone
+  );
+  const yearEnd = toUtcDate(
+    `${year + 1}-${String(birthM).padStart(2, '0')}-${String(birthD).padStart(2, '0')}`,
+    '00:00:00',
+    timezone
+  );
+  const yearMidpoint = new Date(
+    (yearStart.getTime() + yearEnd.getTime()) / 2
+  );
+
+  const yearsFromBirth = year - parseInt(normalizedDate.slice(0, 4), 10) + 2;
+  const maxYears = Math.min(120, Math.max(30, yearsFromBirth));
+  const { mahaDashas, antarDashasByMaha } = generateVimshottariDasha(
+    normalizedDate,
+    time,
+    lat,
+    lng,
+    timezone,
+    maxYears
+  );
+
+  // Find the single antardasha that contains the midpoint of the birth year
+  let chosenAntar = null;
+  for (let m = 0; m < mahaDashas.length; m++) {
+    const antars = antarDashasByMaha[m] || [];
+    for (const antar of antars) {
+      const antarStart = new Date(antar.start);
+      const antarEnd = new Date(antar.end);
+      if (yearMidpoint >= antarStart && yearMidpoint < antarEnd) {
+        chosenAntar = antar;
+        break;
+      }
+    }
+    if (chosenAntar) break;
+  }
+
+  // Strict pratyadasha: 9 sub-periods of the antardasha (proportional to lord years/120),
+  // clipped to the birth year. You get 2–9 segments depending on how the year overlaps the antardasha.
+  const segments = [];
+  if (chosenAntar) {
+    const antarYears = chosenAntar.years;
+    const antarLordIndex = VIMSHOTTARI_DASHAS.findIndex(
+      (d) => d.lord === chosenAntar.antarLord
+    );
+    if (antarLordIndex !== -1) {
+      let pratyStart = new Date(chosenAntar.start);
+      for (let i = 0; i < VIMSHOTTARI_DASHAS.length; i++) {
+        const pratyLordInfo =
+          VIMSHOTTARI_DASHAS[(antarLordIndex + i) % VIMSHOTTARI_DASHAS.length];
+        const pratyYears = antarYears * (pratyLordInfo.years / 120);
+        const pratyEnd = addYears(pratyStart, pratyYears);
+
+        const segStart = pratyStart < yearStart ? yearStart : pratyStart;
+        const segEnd = pratyEnd > yearEnd ? yearEnd : pratyEnd;
+        if (segStart < segEnd) {
+          const days =
+            Math.round(
+              (segEnd.getTime() - segStart.getTime()) /
+                (24 * 60 * 60 * 1000)
+            ) || 0;
+          segments.push({
+            mahaLord: chosenAntar.mahaLord,
+            antarLord: chosenAntar.antarLord,
+            pratyadashaLord: pratyLordInfo.lord,
+            start: segStart.toISOString(),
+            end: segEnd.toISOString(),
+            days
+          });
+        }
+        pratyStart = pratyEnd;
+      }
+    }
+  }
+
+  segments.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+  return {
+    year,
+    pratyadashaSegments: segments
+  };
+}
+
 module.exports = {
-  generateVimshottariDasha
+  generateVimshottariDasha,
+  getPratyadashaForYear
 };
 
 
