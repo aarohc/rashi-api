@@ -179,7 +179,7 @@ function generateVimshottariDasha(
  * @param {number} lng - Birth longitude
  * @param {number} timezone - Birth timezone offset (hours)
  * @param {number} year - Birth year (e.g. 2025 = from birthday in 2025 to next birthday)
- * @returns {{ year: number, pratyadashaSegments: Array<{ mahaLord, antarLord, pratyadashaLord, start, end, days }> }}
+ * @returns {{ year: number, pratyadashaSegments: Array<{ mahaLord, antarLord, pratyadashaLord, start, end, days, sukshmaSegments?: Array<{ sukshmadashaLord, start, end, days }> }> }}
  */
 function getPratyadashaForYear(normalizedDate, time, lat, lng, timezone, year) {
   // Birth-year boundaries: birthday in year (inclusive start) to birthday in year+1 (exclusive end)
@@ -226,6 +226,7 @@ function getPratyadashaForYear(normalizedDate, time, lat, lng, timezone, year) {
 
   // Strict pratyadasha: 9 sub-periods of the antardasha (proportional to lord years/120),
   // clipped to the birth year. You get 2–9 segments depending on how the year overlaps the antardasha.
+  // Each pratyadasha segment is further subdivided into 9 sukshma dasha periods (same Vimshottari order).
   const segments = [];
   if (chosenAntar) {
     const antarYears = chosenAntar.years;
@@ -248,13 +249,45 @@ function getPratyadashaForYear(normalizedDate, time, lat, lng, timezone, year) {
               (segEnd.getTime() - segStart.getTime()) /
                 (24 * 60 * 60 * 1000)
             ) || 0;
+          const segmentDurationYears = days / 365.25;
+          const pratyLordIndex = VIMSHOTTARI_DASHAS.findIndex(
+            (d) => d.lord === pratyLordInfo.lord
+          );
+          const sukshmaSegments = [];
+          if (pratyLordIndex !== -1) {
+            let sukshmaStart = segStart;
+            for (let s = 0; s < VIMSHOTTARI_DASHAS.length; s++) {
+              const sukshmaLordInfo =
+                VIMSHOTTARI_DASHAS[(pratyLordIndex + s) % VIMSHOTTARI_DASHAS.length];
+              const sukshmaDurationYears =
+                segmentDurationYears * (sukshmaLordInfo.years / 120);
+              const sukshmaEndDate = addYears(sukshmaStart, sukshmaDurationYears);
+              const sStart = sukshmaStart < segStart ? segStart : sukshmaStart;
+              const sEnd = sukshmaEndDate > segEnd ? segEnd : sukshmaEndDate;
+              if (sStart < sEnd) {
+                const sDays =
+                  Math.round(
+                    (sEnd.getTime() - sStart.getTime()) /
+                      (24 * 60 * 60 * 1000)
+                  ) || 0;
+                sukshmaSegments.push({
+                  sukshmadashaLord: sukshmaLordInfo.lord,
+                  start: sStart.toISOString(),
+                  end: sEnd.toISOString(),
+                  days: sDays
+                });
+              }
+              sukshmaStart = sukshmaEndDate;
+            }
+          }
           segments.push({
             mahaLord: chosenAntar.mahaLord,
             antarLord: chosenAntar.antarLord,
             pratyadashaLord: pratyLordInfo.lord,
             start: segStart.toISOString(),
             end: segEnd.toISOString(),
-            days
+            days,
+            sukshmaSegments
           });
         }
         pratyStart = pratyEnd;
