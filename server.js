@@ -1329,6 +1329,46 @@ app.get('/api/generic-predictions', (req, res) => {
 
 /**
  * @swagger
+ * /version:
+ *   get:
+ *     summary: Version endpoint
+ *     description: Returns the deployed application version (from package.json and optional build/git info)
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Version info
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 name:
+ *                   type: string
+ *                 version:
+ *                   type: string
+ *                 build:
+ *                   type: string
+ *                   description: Build or git commit if set at deploy time
+ */
+app.get('/version', (req, res) => {
+  let version = process.env.BUILD_VERSION || process.env.npm_package_version;
+  if (!version) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+      version = pkg.version || 'unknown';
+    } catch {
+      version = 'unknown';
+    }
+  }
+  res.json({
+    name: 'rashi-api',
+    version,
+    ...(process.env.GIT_COMMIT && { build: process.env.GIT_COMMIT }),
+  });
+});
+
+/**
+ * @swagger
  * /health:
  *   get:
  *     summary: Health check endpoint
