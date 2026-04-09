@@ -33,16 +33,20 @@ fi
 echo "📦 Creating resource group if it doesn't exist..."
 az group create --name "$RESOURCE_GROUP" --location "$LOCATION" || true
 
-# Create storage account (required for Azure Functions)
-# Azure limit: 3-24 chars, lowercase alphanumeric only
-STORAGE_SUFFIX=$(date +%s | tail -c 6)
-STORAGE_ACCOUNT_NAME="rashi${STORAGE_SUFFIX}"
-echo "💾 Creating storage account: $STORAGE_ACCOUNT_NAME"
-az storage account create \
-    --name "$STORAGE_ACCOUNT_NAME" \
-    --location "$LOCATION" \
-    --resource-group "$RESOURCE_GROUP" \
-    --sku Standard_LRS || true
+# Use a fixed storage account name so we reuse the same account on redeploy (required for Azure Functions).
+# Override with AZURE_STORAGE_ACCOUNT_NAME if needed (e.g. name taken globally). Azure: 3-24 chars, lowercase alphanumeric.
+STORAGE_ACCOUNT_NAME="${AZURE_STORAGE_ACCOUNT_NAME:-rashiastrovoyages}"
+echo "💾 Using storage account: $STORAGE_ACCOUNT_NAME"
+if az storage account show --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" &>/dev/null; then
+    echo "   (already exists in $RESOURCE_GROUP, reusing)"
+else
+    echo "   Creating in $RESOURCE_GROUP..."
+    az storage account create \
+        --name "$STORAGE_ACCOUNT_NAME" \
+        --location "$LOCATION" \
+        --resource-group "$RESOURCE_GROUP" \
+        --sku Standard_LRS
+fi
 
 # Create Function App
 echo "⚡ Creating Function App..."
