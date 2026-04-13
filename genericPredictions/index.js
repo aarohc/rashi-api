@@ -52,6 +52,8 @@ module.exports = async function (context, req) {
       }
       out[keys[i]] = data;
     }
+    const yogaDescPath = path.join(baseDataDir, 'yoga-descriptions.json');
+    out.yogaDescriptions = readJsonIfExists(yogaDescPath) || {};
     context.res = {
       status: 200,
       body: out,

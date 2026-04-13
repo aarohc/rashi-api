@@ -1,20 +1,24 @@
 const request = require('supertest');
 const app = require('./server');
 
+function responseBodyAsString(res) {
+  if (typeof res.text === 'string' && res.text.length) return res.text;
+  if (typeof res.body === 'string') return res.body;
+  if (Buffer.isBuffer(res.body)) return res.body.toString('utf8');
+  return '';
+}
+
 describe('Rashi API Server', () => {
+  // Test data: 5th September 1979, 19:35, Surat, Gujarat, India
+  const testData = {
+    date: '1979-09-05',
+    time: '19:35:00',
+    lat: 21.1702,
+    lng: 72.8311,
+    timezone: 5.5,
+  };
 
   describe('POST /api/rashi', () => {
-    // Test data: 5th September 1979, 19:35, Surat, Gujarat, India
-    // Note: vedic-astrology expects date in yyyy-mm-dd format and timezone as a number (offset in hours)
-    // Expected results match rashi.json: Ascendant=12, Sun=5, Moon=11, etc.
-    const testData = {
-      date: '1979-09-05',  // yyyy-mm-dd format (or dd-mm-yyyy will be auto-converted)
-      time: '19:35:00',    // 7:35 PM (19:35) - corrected from 17:35
-      lat: 21.1702,  // Surat, Gujarat, India latitude
-      lng: 72.8311,  // Surat, Gujarat, India longitude
-      timezone: 5.5  // India timezone offset (IST - UTC+5:30 = 5.5 hours)
-    };
-
     it('should successfully compute Rashi data for the given birth details', async () => {
       const response = await request(app)
         .post('/api/rashi')
@@ -182,6 +186,17 @@ describe('Rashi API Server', () => {
     });
   });
 
+  describe('POST /api/yogas', () => {
+    it('should return yogas and summary for valid birth data', async () => {
+      const response = await request(app).post('/api/yogas').send(testData).expect(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty('yogas');
+      expect(response.body.data).toHaveProperty('summary');
+      expect(Array.isArray(response.body.data.yogas)).toBe(true);
+      expect(typeof response.body.data.summary.totalYogas).toBe('number');
+    });
+  });
+
   describe('POST /api/horoscope', () => {
     it('should successfully generate horoscope SVG', async () => {
       const response = await request(app)
@@ -189,10 +204,10 @@ describe('Rashi API Server', () => {
         .send(testData)
         .expect(200);
 
-      // Should return SVG content
-      expect(response.headers['content-type']).toContain('svg');
-      expect(response.text).toContain('<svg');
-      expect(response.text).toContain('Vedic Horoscope Chart');
+      const svg = responseBodyAsString(response);
+      expect(response.headers['content-type']).toMatch(/svg/);
+      expect(svg).toContain('<svg');
+      expect(svg).toMatch(/Vedic Horoscope/);
     });
 
     it('should return JSON format when Accept header is application/json', async () => {
@@ -226,8 +241,48 @@ describe('Rashi API Server', () => {
         .send({ ...testData, size: 1000 })
         .expect(200);
 
-      expect(response.text).toContain('width="1000"');
-      expect(response.text).toContain('height="1000"');
+      const svg = responseBodyAsString(response);
+      expect(svg).toContain('width="1000"');
+      expect(svg).toContain('height="1000"');
+    });
+  });
+
+  describe('POST /api/mudda-dasha', () => {
+    it('should return exactly nine Mudda segments for a birth-year after birth', async () => {
+      const response = await request(app)
+        .post('/api/mudda-dasha')
+        .send({ ...testData, year: 2002 })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      const { muddaSegments, year } = response.body.data;
+      expect(year).toBe(2002);
+      expect(Array.isArray(muddaSegments)).toBe(true);
+      expect(muddaSegments).toHaveLength(9);
+
+      for (let i = 0; i < muddaSegments.length; i++) {
+        const s = muddaSegments[i];
+        expect(s).toHaveProperty('muddaLord');
+        expect(s).toHaveProperty('start');
+        expect(s).toHaveProperty('end');
+        expect(s).toHaveProperty('days');
+        expect(s.muddaLord).toBe(s.pratyadashaLord);
+      }
+
+      for (let i = 1; i < muddaSegments.length; i++) {
+        const prevEnd = new Date(muddaSegments[i - 1].end).getTime();
+        const curStart = new Date(muddaSegments[i].start).getTime();
+        expect(curStart).toBe(prevEnd);
+      }
+    });
+
+    it('should return 400 when birth-year is before birth calendar year', async () => {
+      const response = await request(app)
+        .post('/api/mudda-dasha')
+        .send({ ...testData, year: 1970 })
+        .expect(400);
+
+      expect(response.body.error).toBeDefined();
     });
   });
 

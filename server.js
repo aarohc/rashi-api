@@ -2,12 +2,12 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
-const vedicAstrology = require('vedic-astrology');
-const swisseph = require('swisseph-v2');
 const { generateHoroscopeSVG } = require('./horoscopeGenerator');
-const { generateVimshottariDasha, getPratyadashaForYear } = require('./vimshottariService');
+const { generateVimshottariDasha, getPratyadashaForYear, getMuddaDashaForYear } = require('./vimshottariService');
 const { computeCompatibility } = require('./compatibilityService');
 const { calculatePlanetAspects } = require('./aspectsService');
+const { computeFullRashiData } = require('./chartComputer');
+const { evaluateAllYogas } = require('./yogaService');
 const { normalizeDateToYmd } = require('./utils');
 const path = require('path');
 const fs = require('fs');
@@ -62,12 +62,20 @@ const swaggerOptions = {
         description: 'Vimshottari (Maha/Antar) dasha calculations'
       },
       {
+        name: 'MuddaDasha',
+        description: 'Mudda Dasha (Varshphala annual) proportional lords for a birth-year'
+      },
+      {
         name: 'Compatibility',
         description: 'Relationship compatibility calculations'
       },
       {
         name: 'Aspects',
         description: 'Vedic planetary aspect (drishti) calculations'
+      },
+      {
+        name: 'Yogas',
+        description: 'Classical Vedic yoga (planetary combination) detection'
       }
     ]
   },
@@ -249,158 +257,8 @@ app.post('/api/rashi', (req, res) => {
   }
 
   try {
-    // Normalize date format to yyyy-mm-dd (vedic-astrology expects this format)
     const normalizedDate = normalizeDateToYmd(date);
-
-    // Compute birth chart using vedic-astrology
-    const birthChart = vedicAstrology.positioner.getBirthChart(normalizedDate, time, lat, lng, timezone);
-
-    // Map Rashi codes to sign numbers (1-12)
-    const rashiToNumber = {
-      'Ar': 1,  // Aries
-      'Ta': 2,  // Taurus
-      'Ge': 3,  // Gemini
-      'Cn': 4,  // Cancer
-      'Le': 5,  // Leo
-      'Vi': 6,  // Virgo
-      'Li': 7,  // Libra
-      'Sc': 8,  // Scorpio
-      'Sg': 9,  // Sagittarius
-      'Cp': 10, // Capricorn
-      'Aq': 11, // Aquarius
-      'Pi': 12  // Pisces
-    };
-
-    // Helper function to calculate house number from planet longitude and Lagna (1-12)
-    const calculateHouseNumber = (planetLongitude, lagnaLongitude) => {
-      let diff = planetLongitude - lagnaLongitude;
-      if (diff < 0) diff += 360;
-      const houseNumber = Math.floor(diff / 30) + 1;
-      return houseNumber > 12 ? houseNumber - 12 : houseNumber;
-    };
-
-    const lagnaLongitude = birthChart.meta.La.longitude;
-
-    // Helper function to calculate outer planets (Uranus, Neptune, Pluto) using swisseph
-    // These are not provided by vedic-astrology library; returns longitude for house calculation
-    const calculateOuterPlanet = (planetNum, normalizedDate, time, timezone) => {
-      try {
-        // Parse date and time
-        const [year, month, day] = normalizedDate.split('-').map(Number);
-        const [hours, minutes, seconds] = time.split(':').map(Number);
-        
-        // Convert to UTC (subtract timezone)
-        let utcHours = hours - timezone;
-        let utcDay = day;
-        if (utcHours < 0) {
-          utcHours += 24;
-          utcDay--;
-        } else if (utcHours >= 24) {
-          utcHours -= 24;
-          utcDay++;
-        }
-        
-        // Calculate Julian Day
-        const jd = swisseph.swe_julday(year, month, utcDay, utcHours + minutes/60 + seconds/3600, 1);
-        
-        // Set sidereal mode to Lahiri (same as vedic-astrology)
-        swisseph.swe_set_sid_mode(1); // 1 = SE_SIDM_LAHIRI
-        const ayanamsha = swisseph.swe_get_ayanamsa_ut(jd);
-        
-        // Calculate planet position
-        const result = swisseph.swe_calc_ut(jd, planetNum, 0);
-        const tropicalLong = result.longitude;
-        const siderealLong = tropicalLong - ayanamsha;
-        const normalizedLong = siderealLong < 0 ? siderealLong + 360 : siderealLong;
-        const sign = Math.floor(normalizedLong / 30) + 1;
-        const isRetro = result.longitudeSpeed < 0;
-        
-        return {
-          current_sign: sign,
-          isRetro: String(isRetro),
-          longitude: normalizedLong
-        };
-      } catch (error) {
-        console.error(`Error calculating outer planet ${planetNum}:`, error);
-        return {
-          current_sign: 0,
-          isRetro: "false",
-          longitude: 0
-        };
-      }
-    };
-
-    const uranusData = calculateOuterPlanet(7, normalizedDate, time, timezone);
-    const neptuneData = calculateOuterPlanet(8, normalizedDate, time, timezone);
-    const plutoData = calculateOuterPlanet(9, normalizedDate, time, timezone);
-
-    // Transform data to match rashi.json format (with house_number for generic predictions)
-    const rashiData = {
-      Ascendant: {
-        current_sign: rashiToNumber[birthChart.meta.La.rashi] || 0,
-        isRetro: String(birthChart.meta.La.isRetrograde || false)
-      },
-      Sun: {
-        current_sign: rashiToNumber[birthChart.meta.Su.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Su.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Su.isRetrograde || false)
-      },
-      Moon: {
-        current_sign: rashiToNumber[birthChart.meta.Mo.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Mo.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Mo.isRetrograde || false)
-      },
-      Mars: {
-        current_sign: rashiToNumber[birthChart.meta.Ma.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ma.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ma.isRetrograde || false)
-      },
-      Mercury: {
-        current_sign: rashiToNumber[birthChart.meta.Me.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Me.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Me.isRetrograde || false)
-      },
-      Jupiter: {
-        current_sign: rashiToNumber[birthChart.meta.Ju.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ju.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ju.isRetrograde || false)
-      },
-      Venus: {
-        current_sign: rashiToNumber[birthChart.meta.Ve.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ve.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ve.isRetrograde || false)
-      },
-      Saturn: {
-        current_sign: rashiToNumber[birthChart.meta.Sa.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Sa.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Sa.isRetrograde || false)
-      },
-      Rahu: {
-        current_sign: rashiToNumber[birthChart.meta.Ra.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ra.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ra.isRetrograde || false)
-      },
-      Ketu: {
-        current_sign: rashiToNumber[birthChart.meta.Ke.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ke.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ke.isRetrograde || false)
-      },
-      Uranus: {
-        current_sign: uranusData.current_sign,
-        house_number: calculateHouseNumber(uranusData.longitude, lagnaLongitude),
-        isRetro: uranusData.isRetro
-      },
-      Neptune: {
-        current_sign: neptuneData.current_sign,
-        house_number: calculateHouseNumber(neptuneData.longitude, lagnaLongitude),
-        isRetro: neptuneData.isRetro
-      },
-      Pluto: {
-        current_sign: plutoData.current_sign,
-        house_number: calculateHouseNumber(plutoData.longitude, lagnaLongitude),
-        isRetro: plutoData.isRetro
-      }
-    };
+    const { rashiData } = computeFullRashiData(normalizedDate, time, lat, lng, timezone);
 
     res.json({
       success: true,
@@ -410,6 +268,69 @@ app.post('/api/rashi', (req, res) => {
   } catch (error) {
     console.error('Error computing Rashi:', error);
     res.status(500).json({ error: 'Failed to compute Rashi data' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/yogas:
+ *   post:
+ *     summary: Detect classical Vedic yogas for a birth chart
+ *     description: Computes rashi positions then evaluates Pancha Mahapurusha, lunar, solar, Raja, special, and Dhana yogas (whole-sign houses, Lahiri sidereal).
+ *     tags: [Yogas]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - date
+ *               - time
+ *               - lat
+ *               - lng
+ *               - timezone
+ *             properties:
+ *               date:
+ *                 type: string
+ *               time:
+ *                 type: string
+ *               lat:
+ *                 type: number
+ *               lng:
+ *                 type: number
+ *               timezone:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Applicable yogas and summary counts
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+app.post('/api/yogas', (req, res) => {
+  const { date, time, lat, lng, timezone } = req.body;
+
+  if (!date || !time || lat === undefined || lng === undefined || timezone === undefined) {
+    return res.status(400).json({
+      error: 'Missing required fields: date (YYYY-MM-DD or DD-MM-YYYY), time (HH:MM:SS), lat, lng, timezone'
+    });
+  }
+
+  try {
+    const normalizedDate = normalizeDateToYmd(date);
+    const { rashiData } = computeFullRashiData(normalizedDate, time, lat, lng, timezone);
+    const result = evaluateAllYogas(rashiData);
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error computing yogas:', error);
+    res.status(500).json({ error: 'Failed to compute yogas' });
   }
 });
 
@@ -705,6 +626,77 @@ app.post('/api/pratyadasha', (req, res) => {
 
 /**
  * @swagger
+ * /api/mudda-dasha:
+ *   post:
+ *     summary: Mudda Dasha segments for a birth-year (Varshphala / Tajik)
+ *     description: Returns exactly nine proportional Mudda periods from birthday in `year` to next birthday. Lords follow Vimshottari order starting from (Moon birth-nakshatra lord index + completed varshas) mod 9. Durations scale (lord years / 120) × window length.
+ *     tags: [MuddaDasha]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [date, time, lat, lng, timezone, year]
+ *     responses:
+ *       200:
+ *         description: Mudda segments for the birth-year
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+app.post('/api/mudda-dasha', (req, res) => {
+  const { date, time, lat, lng, timezone, year } = req.body;
+
+  if (!date || !time || lat === undefined || lng === undefined || timezone === undefined || year === undefined) {
+    return res.status(400).json({
+      error: 'Missing required fields: date (YYYY-MM-DD or DD-MM-YYYY), time (HH:MM:SS), lat, lng, timezone, year'
+    });
+  }
+
+  const yearNum = typeof year === 'string' ? parseInt(year, 10) : year;
+  if (Number.isNaN(yearNum) || yearNum < 1900 || yearNum > 2100) {
+    return res.status(400).json({
+      error: 'Invalid year: must be an integer between 1900 and 2100'
+    });
+  }
+
+  try {
+    let normalizedDate = date;
+    const ddmmyyyyPattern = /^(\d{2})-(\d{2})-(\d{4})$/;
+    const match = date.match(ddmmyyyyPattern);
+    if (match) {
+      const [, day, month, yearPart] = match;
+      normalizedDate = `${yearPart}-${month}-${day}`;
+    }
+
+    const muddaData = getMuddaDashaForYear(
+      normalizedDate,
+      time,
+      lat,
+      lng,
+      timezone,
+      yearNum
+    );
+
+    res.json({
+      success: true,
+      data: muddaData,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error computing mudda-dasha:', error);
+    const msg = error && error.message ? String(error.message) : 'Failed to compute mudda-dasha';
+    if (msg.includes('before birth') || msg.includes('Invalid')) {
+      return res.status(400).json({ error: msg });
+    }
+    res.status(500).json({ error: 'Failed to compute mudda-dasha', detail: msg });
+  }
+});
+
+/**
+ * @swagger
  * /api/compatibility:
  *   post:
  *     summary: Calculate relationship compatibility score between two birth charts
@@ -948,101 +940,8 @@ app.post('/api/planetaspects', (req, res) => {
   }
 
   try {
-    // Normalize date format to yyyy-mm-dd
     const normalizedDate = normalizeDateToYmd(date);
-
-    // Compute birth chart using vedic-astrology
-    const vedicAstrology = require('vedic-astrology');
-    const swisseph = require('swisseph-v2');
-    const birthChart = vedicAstrology.positioner.getBirthChart(normalizedDate, time, lat, lng, timezone);
-
-    // Map Rashi codes to sign numbers (1-12)
-    const rashiToNumber = {
-      'Ar': 1, 'Ta': 2, 'Ge': 3, 'Cn': 4, 'Le': 5, 'Vi': 6,
-      'Li': 7, 'Sc': 8, 'Sg': 9, 'Cp': 10, 'Aq': 11, 'Pi': 12
-    };
-
-    // Helper function to calculate outer planets using swisseph
-    const calculateOuterPlanet = (planetNum, normalizedDate, time, timezone) => {
-      try {
-        const [year, month, day] = normalizedDate.split('-').map(Number);
-        const [hours, minutes, seconds] = time.split(':').map(Number);
-        
-        let utcHours = hours - timezone;
-        let utcDay = day;
-        if (utcHours < 0) {
-          utcHours += 24;
-          utcDay--;
-        } else if (utcHours >= 24) {
-          utcHours -= 24;
-          utcDay++;
-        }
-        
-        const jd = swisseph.swe_julday(year, month, utcDay, utcHours + minutes/60 + seconds/3600, 1);
-        swisseph.swe_set_sid_mode(1);
-        const ayanamsha = swisseph.swe_get_ayanamsa_ut(jd);
-        
-        const result = swisseph.swe_calc_ut(jd, planetNum, 0);
-        const tropicalLong = result.longitude;
-        const siderealLong = tropicalLong - ayanamsha;
-        const normalizedLong = siderealLong < 0 ? siderealLong + 360 : siderealLong;
-        const sign = Math.floor(normalizedLong / 30) + 1;
-        const isRetro = result.longitudeSpeed < 0;
-        
-        return { current_sign: sign, isRetro: String(isRetro) };
-      } catch (error) {
-        return { current_sign: 0, isRetro: "false" };
-      }
-    };
-
-    // Build rashi data for aspect calculation
-    const rashiData = {
-      Ascendant: {
-        current_sign: rashiToNumber[birthChart.meta.La.rashi] || 0,
-        isRetro: String(birthChart.meta.La.isRetrograde || false)
-      },
-      Sun: {
-        current_sign: rashiToNumber[birthChart.meta.Su.rashi] || 0,
-        isRetro: String(birthChart.meta.Su.isRetrograde || false)
-      },
-      Moon: {
-        current_sign: rashiToNumber[birthChart.meta.Mo.rashi] || 0,
-        isRetro: String(birthChart.meta.Mo.isRetrograde || false)
-      },
-      Mars: {
-        current_sign: rashiToNumber[birthChart.meta.Ma.rashi] || 0,
-        isRetro: String(birthChart.meta.Ma.isRetrograde || false)
-      },
-      Mercury: {
-        current_sign: rashiToNumber[birthChart.meta.Me.rashi] || 0,
-        isRetro: String(birthChart.meta.Me.isRetrograde || false)
-      },
-      Jupiter: {
-        current_sign: rashiToNumber[birthChart.meta.Ju.rashi] || 0,
-        isRetro: String(birthChart.meta.Ju.isRetrograde || false)
-      },
-      Venus: {
-        current_sign: rashiToNumber[birthChart.meta.Ve.rashi] || 0,
-        isRetro: String(birthChart.meta.Ve.isRetrograde || false)
-      },
-      Saturn: {
-        current_sign: rashiToNumber[birthChart.meta.Sa.rashi] || 0,
-        isRetro: String(birthChart.meta.Sa.isRetrograde || false)
-      },
-      Rahu: {
-        current_sign: rashiToNumber[birthChart.meta.Ra.rashi] || 0,
-        isRetro: String(birthChart.meta.Ra.isRetrograde || false)
-      },
-      Ketu: {
-        current_sign: rashiToNumber[birthChart.meta.Ke.rashi] || 0,
-        isRetro: String(birthChart.meta.Ke.isRetrograde || false)
-      },
-      Uranus: calculateOuterPlanet(7, normalizedDate, time, timezone),
-      Neptune: calculateOuterPlanet(8, normalizedDate, time, timezone),
-      Pluto: calculateOuterPlanet(9, normalizedDate, time, timezone)
-    };
-
-    // Calculate aspects
+    const { rashiData } = computeFullRashiData(normalizedDate, time, lat, lng, timezone);
     const aspectData = calculatePlanetAspects(rashiData);
 
     res.json({
@@ -1163,79 +1062,9 @@ app.post('/api/horoscope', (req, res) => {
   }
 
   try {
-    // Compute birth chart using vedic-astrology
-    const birthChart = vedicAstrology.positioner.getBirthChart(date, time, lat, lng, timezone);
+    const normalizedDate = normalizeDateToYmd(date);
+    const { birthChart, rashiData } = computeFullRashiData(normalizedDate, time, lat, lng, timezone);
 
-    // Map Rashi codes to sign numbers (1-12)
-    const rashiToNumber = {
-      'Ar': 1, 'Ta': 2, 'Ge': 3, 'Cn': 4, 'Le': 5, 'Vi': 6,
-      'Li': 7, 'Sc': 8, 'Sg': 9, 'Cp': 10, 'Aq': 11, 'Pi': 12
-    };
-
-    // Helper function to calculate house number
-    const calculateHouseNumber = (planetLongitude, lagnaLongitude) => {
-      let diff = planetLongitude - lagnaLongitude;
-      if (diff < 0) diff += 360;
-      const houseNumber = Math.floor(diff / 30) + 1;
-      return houseNumber > 12 ? houseNumber - 12 : houseNumber;
-    };
-
-    const lagnaLongitude = birthChart.meta.La.longitude;
-
-    // Transform data to match rasi1.json format
-    const rashiData = {
-      Ascendant: {
-        current_sign: rashiToNumber[birthChart.meta.La.rashi] || 0,
-        isRetro: String(birthChart.meta.La.isRetrograde || false)
-      },
-      Sun: {
-        current_sign: rashiToNumber[birthChart.meta.Su.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Su.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Su.isRetrograde || false)
-      },
-      Moon: {
-        current_sign: rashiToNumber[birthChart.meta.Mo.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Mo.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Mo.isRetrograde || false)
-      },
-      Mars: {
-        current_sign: rashiToNumber[birthChart.meta.Ma.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ma.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ma.isRetrograde || false)
-      },
-      Mercury: {
-        current_sign: rashiToNumber[birthChart.meta.Me.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Me.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Me.isRetrograde || false)
-      },
-      Jupiter: {
-        current_sign: rashiToNumber[birthChart.meta.Ju.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ju.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ju.isRetrograde || false)
-      },
-      Venus: {
-        current_sign: rashiToNumber[birthChart.meta.Ve.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ve.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ve.isRetrograde || false)
-      },
-      Saturn: {
-        current_sign: rashiToNumber[birthChart.meta.Sa.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Sa.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Sa.isRetrograde || false)
-      },
-      Rahu: {
-        current_sign: rashiToNumber[birthChart.meta.Ra.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ra.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ra.isRetrograde || false)
-      },
-      Ketu: {
-        current_sign: rashiToNumber[birthChart.meta.Ke.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ke.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ke.isRetrograde || false)
-      }
-    };
-
-    // Generate SVG
     const svg = generateHoroscopeSVG(rashiData, birthChart, {
       size: size || 800,
       chartType: chartType || 'north-indian'
@@ -1320,6 +1149,8 @@ app.get('/api/generic-predictions', (req, res) => {
       }
       out[keys[i]] = data;
     }
+    const yogaDescPath = path.join(baseDataDir, 'yoga-descriptions.json');
+    out.yogaDescriptions = readJsonIfExists(yogaDescPath) || {};
     res.json(out);
   } catch (err) {
     console.error('Error serving generic-predictions:', err);

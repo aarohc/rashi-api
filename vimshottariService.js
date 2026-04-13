@@ -303,9 +303,102 @@ function getPratyadashaForYear(normalizedDate, time, lat, lng, timezone, year) {
   };
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/**
+ * Mudda Dasha (Varshphala / Tajik): nine proportional lords over one birth-year window.
+ * Birth year = birthday in `year` (inclusive) to birthday in `year+1` (exclusive), same as pratyadasha.
+ *
+ * Rules (see docs/adr/001-mudda-dasha-yearly-spec.md):
+ * - Segment lengths: (VimshottariYears[lord] / 120) × actual window length in ms.
+ * - Starting lord index: (Vimshottari index of Moon's birth-nakshatra lord + completed varshas) mod 9,
+ *   where completed varshas = `year - birthCalendarYear` from birth date.
+ * - Exactly 9 segments per call; last segment ends exactly at yearEnd.
+ *
+ * @returns {{ year: number, muddaSegments: Array<{ muddaLord: string, mahaLord: string, antarLord: string, pratyadashaLord: string, start: string, end: string, days: number }> }}
+ */
+function getMuddaDashaForYear(normalizedDate, time, lat, lng, timezone, year) {
+  const birthChart = vedicAstrology.positioner.getBirthChart(
+    normalizedDate,
+    time,
+    lat,
+    lng,
+    timezone
+  );
+  const moonLong = birthChart.meta.Mo.longitude;
+  const nakIndex = Math.floor(moonLong / NAKSHATRA_SPAN);
+  const nakshatra = NAKSHATRAS[nakIndex];
+  const birthLordIndex = VIMSHOTTARI_DASHAS.findIndex((d) => d.lord === nakshatra.lord);
+  if (birthLordIndex === -1) {
+    throw new Error(
+      `Unknown Vimshottari lord for nakshatra ${nakshatra?.name || 'unknown'}`
+    );
+  }
+
+  const birthY = parseInt(normalizedDate.slice(0, 4), 10);
+  const birthM = parseInt(normalizedDate.slice(5, 7), 10);
+  const birthD = parseInt(normalizedDate.slice(8, 10), 10);
+  if (Number.isNaN(birthY) || Number.isNaN(birthM) || Number.isNaN(birthD)) {
+    throw new Error('Invalid birth date');
+  }
+  if (year < birthY) {
+    throw new Error('Birth-year parameter cannot be before birth calendar year');
+  }
+
+  const yearStart = toUtcDate(
+    `${year}-${String(birthM).padStart(2, '0')}-${String(birthD).padStart(2, '0')}`,
+    '00:00:00',
+    timezone
+  );
+  const yearEnd = toUtcDate(
+    `${year + 1}-${String(birthM).padStart(2, '0')}-${String(birthD).padStart(2, '0')}`,
+    '00:00:00',
+    timezone
+  );
+  const totalMs = yearEnd.getTime() - yearStart.getTime();
+  if (totalMs <= 0) {
+    throw new Error('Invalid birth-year window');
+  }
+
+  const completedVarshas = year - birthY;
+  const muddaStartIndex = (birthLordIndex + completedVarshas) % 9;
+
+  const segments = [];
+  let t = yearStart.getTime();
+  for (let i = 0; i < VIMSHOTTARI_DASHAS.length; i++) {
+    const lordInfo = VIMSHOTTARI_DASHAS[(muddaStartIndex + i) % VIMSHOTTARI_DASHAS.length];
+    const isLast = i === VIMSHOTTARI_DASHAS.length - 1;
+    const segEndMs = isLast
+      ? yearEnd.getTime()
+      : t + totalMs * (lordInfo.years / 120);
+    const segStart = new Date(t);
+    const segEnd = new Date(segEndMs);
+    const days =
+      Math.round((segEnd.getTime() - segStart.getTime()) / MS_PER_DAY) || 0;
+    segments.push({
+      muddaLord: lordInfo.lord,
+      mahaLord: 'Mudda',
+      antarLord: lordInfo.lord,
+      pratyadashaLord: lordInfo.lord,
+      start: segStart.toISOString(),
+      end: segEnd.toISOString(),
+      days
+    });
+    t = segEndMs;
+  }
+
+  segments.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+  return {
+    year,
+    muddaSegments: segments
+  };
+}
+
 module.exports = {
   generateVimshottariDasha,
-  getPratyadashaForYear
+  getPratyadashaForYear,
+  getMuddaDashaForYear
 };
 
 

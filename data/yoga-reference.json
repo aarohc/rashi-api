@@ -1,0 +1,70 @@
+{
+  "signLordship": {
+    "1": "Mars",
+    "2": "Venus",
+    "3": "Mercury",
+    "4": "Moon",
+    "5": "Sun",
+    "6": "Mercury",
+    "7": "Venus",
+    "8": "Mars",
+    "9": "Jupiter",
+    "10": "Saturn",
+    "11": "Saturn",
+    "12": "Jupiter"
+  },
+  "planetOwnSigns": {
+    "Sun": [5],
+    "Moon": [4],
+    "Mars": [1, 8],
+    "Mercury": [3, 6],
+    "Jupiter": [9, 12],
+    "Venus": [2, 7],
+    "Saturn": [10, 11],
+    "Rahu": [],
+    "Ketu": []
+  },
+  "exaltation": {
+    "Sun": 1,
+    "Moon": 2,
+    "Mars": 10,
+    "Mercury": 6,
+    "Jupiter": 4,
+    "Venus": 12,
+    "Saturn": 7,
+    "Rahu": 2,
+    "Ketu": 8
+  },
+  "debilitation": {
+    "Sun": 7,
+    "Moon": 8,
+    "Mars": 4,
+    "Mercury": 12,
+    "Jupiter": 10,
+    "Venus": 6,
+    "Saturn": 1,
+    "Rahu": 8,
+    "Ketu": 2
+  },
+  "moolatrikona": {
+    "Sun": 5,
+    "Moon": 2,
+    "Mars": 1,
+    "Mercury": 6,
+    "Jupiter": 9,
+    "Venus": 7,
+    "Saturn": 11,
+    "Rahu": 3,
+    "Ketu": 9
+  },
+  "notes": {
+    "rahuKetu": "Parashari: Rahu exalted in Taurus (2), debilitated in Scorpio (8); Ketu exalted in Scorpio (8), debilitated in Taurus (2). This file uses Rahu exaltation 2 / debilitation 8 and Ketu exaltation 8 / debilitation 2 for symmetry with nodes as a pair."
+  },
+  "houseClassifications": {
+    "kendra": [1, 4, 7, 10],
+    "trikona": [1, 5, 9],
+    "dusthana": [6, 8, 12],
+    "upachaya": [3, 6, 10, 11],
+    "maraka": [2, 7]
+  }
+}

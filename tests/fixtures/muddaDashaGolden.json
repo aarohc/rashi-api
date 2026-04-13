@@ -1,0 +1,15 @@
+{
+  "description": "Golden expectations for Mudda API — segment count and full-cycle invariants (rashi-api jest).",
+  "fixture1979Sep05IST": {
+    "date": "1979-09-05",
+    "time": "19:35:00",
+    "lat": 21.1702,
+    "lng": 72.8311,
+    "timezone": 5.5,
+    "birthYearParam": 2002,
+    "expect": {
+      "segmentCount": 9,
+      "sumOfProportions": 1
+    }
+  }
+}
