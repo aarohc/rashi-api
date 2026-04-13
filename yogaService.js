@@ -612,6 +612,9 @@ function enrichWithDescriptions(yogas, descriptions) {
       sanskritName: y.sanskritName || d.sanskritName || y.name,
       shortDescription: d.shortDescription || '',
       fullDescription: d.fullDescription || '',
+      ...(Array.isArray(d.opportunities) &&
+        d.opportunities.length && { opportunities: d.opportunities }),
+      ...(Array.isArray(d.challenges) && d.challenges.length && { challenges: d.challenges }),
       ...(d.keywords && { keywords: d.keywords }),
       ...(d.lifeDomains && { lifeDomains: d.lifeDomains }),
     };

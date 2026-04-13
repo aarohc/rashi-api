@@ -1093,7 +1093,7 @@ app.post('/api/horoscope', (req, res) => {
  * /api/generic-predictions:
  *   get:
  *     summary: Get generic prediction data (planet-in-house and house-by-rashi)
- *     description: Returns static JSON from data/planet.json and data/house.json for building generic predictions by lookup. planetInHouse keys = planet names then house "1".."12"; houseByRashi keys = house "1".."12" then rashi "1".."12".
+ *     description: Returns static JSON from data/planet.json and data/house.json for building generic predictions by lookup. planetInHouse keys = Sun..Ketu plus Uranus, Neptune, Pluto, then house "1".."12"; houseByRashi keys = house "1".."12" then rashi "1".."12". Locale-specific files live under data/{locale}/ when present.
  *     tags: [Rashi]
  *     parameters:
  *       - in: query

@@ -18,6 +18,19 @@ describe('Rashi API Server', () => {
     timezone: 5.5,
   };
 
+  describe('GET /api/generic-predictions', () => {
+    it('should include outer planets in planetInHouse', async () => {
+      const response = await request(app).get('/api/generic-predictions?locale=en').expect(200);
+      const { planetInHouse } = response.body;
+      expect(planetInHouse).toBeDefined();
+      for (const p of ['Uranus', 'Neptune', 'Pluto']) {
+        expect(planetInHouse).toHaveProperty(p);
+        expect(Object.keys(planetInHouse[p])).toHaveLength(12);
+        expect(planetInHouse[p]['1']).toMatch(new RegExp(`### ${p} in`));
+      }
+    });
+  });
+
   describe('POST /api/rashi', () => {
     it('should successfully compute Rashi data for the given birth details', async () => {
       const response = await request(app)
@@ -194,6 +207,13 @@ describe('Rashi API Server', () => {
       expect(response.body.data).toHaveProperty('summary');
       expect(Array.isArray(response.body.data.yogas)).toBe(true);
       expect(typeof response.body.data.summary.totalYogas).toBe('number');
+      const first = response.body.data.yogas[0];
+      if (first) {
+        expect(Array.isArray(first.opportunities)).toBe(true);
+        expect(first.opportunities.length).toBeGreaterThan(0);
+        expect(Array.isArray(first.challenges)).toBe(true);
+        expect(first.challenges.length).toBeGreaterThan(0);
+      }
     });
   });
 
