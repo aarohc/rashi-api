@@ -636,6 +636,17 @@ function buildSummary(yogas) {
   };
 }
 
+function loadYogaDescriptionsMerged() {
+  try {
+    const { getYogaDescriptionsOverride } = require('./rashiContentOverrides');
+    const o = getYogaDescriptionsOverride();
+    if (o) return o;
+  } catch (_) {
+    /* optional module / no Mongo */
+  }
+  return loadJson('yoga-descriptions.json');
+}
+
 /**
  * @param {object} rashiData /api/rashi shape
  * @param {object} [referenceData] optional loaded yoga-reference
@@ -643,7 +654,7 @@ function buildSummary(yogas) {
  */
 function evaluateAllYogas(rashiData, referenceData, descriptions) {
   const ref = referenceData || loadJson('yoga-reference.json');
-  const desc = descriptions || loadJson('yoga-descriptions.json');
+  const desc = descriptions || loadYogaDescriptionsMerged();
   const aspectData = calculatePlanetAspects(rashiData);
 
   const all = [

@@ -1132,8 +1132,10 @@ function readJsonIfExists(filePath) {
   if (!fs.existsSync(filePath)) return null;
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
-app.get('/api/generic-predictions', (req, res) => {
+app.get('/api/generic-predictions', async (req, res) => {
   try {
+    const { ensureRashiOverridesFresh, getGenericFileOverride, getYogaDescriptionsOverride } = require('./rashiContentOverrides');
+    await ensureRashiOverridesFresh();
     const baseDataDir = path.join(__dirname, 'data');
     const locale = (req.query.locale && String(req.query.locale).toLowerCase()) || 'en';
     const dataDir = getGenericPredictionsDataDir(baseDataDir, locale);
@@ -1142,15 +1144,20 @@ app.get('/api/generic-predictions', (req, res) => {
     const keys = ['planetInHouse', 'houseByRashi', 'dashaGeneric', 'dashaMaha', 'pratyadashaGeneric'];
     const out = {};
     for (let i = 0; i < files.length; i++) {
-      let data = readJsonIfExists(path.join(dataDir, files[i]));
-      if (data == null && dataDir !== enDir) data = readJsonIfExists(path.join(enDir, files[i]));
+      const stem = files[i].replace(/\.json$/i, '');
+      let data = getGenericFileOverride(stem, locale);
+      if (!data) {
+        data = readJsonIfExists(path.join(dataDir, files[i]));
+        if (data == null && dataDir !== enDir) data = readJsonIfExists(path.join(enDir, files[i]));
+      }
       if (data == null) {
         return res.status(500).json({ error: 'Failed to load generic prediction data', missing: files[i] });
       }
       out[keys[i]] = data;
     }
     const yogaDescPath = path.join(baseDataDir, 'yoga-descriptions.json');
-    out.yogaDescriptions = readJsonIfExists(yogaDescPath) || {};
+    const yogaDescriptions = getYogaDescriptionsOverride() || readJsonIfExists(yogaDescPath) || {};
+    out.yogaDescriptions = yogaDescriptions;
     res.json(out);
   } catch (err) {
     console.error('Error serving generic-predictions:', err);
@@ -1229,8 +1236,16 @@ module.exports = app;
 
 // Start server only if not in test environment
 if (require.main === module) {
-app.listen(PORT, () => {
-  console.log(`Rashi microservice running on port ${PORT}`);
-    console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
-});
+  (async () => {
+    try {
+      const { refreshRashiContentOverrides } = require('./rashiContentOverrides');
+      await refreshRashiContentOverrides();
+    } catch (e) {
+      console.warn('[rashiContentOverrides] startup:', e && e.message ? e.message : e);
+    }
+    app.listen(PORT, () => {
+      console.log(`Rashi microservice running on port ${PORT}`);
+      console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
+    });
+  })();
 }

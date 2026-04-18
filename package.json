@@ -8,15 +8,16 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "preinstall": "node -e \"var m=parseInt(process.versions.node.split('.')[0],10);if(m<22){console.error('❌ Node.js 22+ required. Current:', process.version);process.exit(1)}\"",
+    "preinstall": "node scripts/preinstall-check.cjs",
     "setup": "bash setup.sh",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "jest --watchman=false",
+    "test:watch": "jest --watchman=false --watch",
+    "test:coverage": "jest --watchman=false --coverage",
     "start": "node server.js"
   },
   "jest": {
     "testEnvironment": "node",
+    "watchman": false,
     "coveragePathIgnorePatterns": [
       "/node_modules/"
     ]
@@ -28,6 +29,7 @@
   "dependencies": {
     "body-parser": "^2.2.0",
     "express": "^5.1.0",
+    "mongodb": "^6.21.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "swisseph-v2": "^1.0.4",

@@ -32,6 +32,8 @@ function readJsonIfExists(filePath) {
 
 module.exports = async function (context, req) {
   try {
+    const { ensureRashiOverridesFresh, getGenericFileOverride, getYogaDescriptionsOverride } = require('../rashiContentOverrides');
+    await ensureRashiOverridesFresh();
     const baseDataDir = getBaseDataDir();
     const locale = (req && req.query && req.query.locale) ? String(req.query.locale).toLowerCase() : 'en';
     const dataDir = getDataDirForLocale(baseDataDir, locale);
@@ -40,8 +42,12 @@ module.exports = async function (context, req) {
     const keys = ['planetInHouse', 'houseByRashi', 'dashaGeneric', 'dashaMaha', 'pratyadashaGeneric'];
     const out = {};
     for (let i = 0; i < files.length; i++) {
-      let data = readJsonIfExists(path.join(dataDir, files[i]));
-      if (data == null && dataDir !== enDir) data = readJsonIfExists(path.join(enDir, files[i]));
+      const stem = files[i].replace(/\.json$/i, '');
+      let data = getGenericFileOverride(stem, locale);
+      if (!data) {
+        data = readJsonIfExists(path.join(dataDir, files[i]));
+        if (data == null && dataDir !== enDir) data = readJsonIfExists(path.join(enDir, files[i]));
+      }
       if (data == null) {
         context.res = {
           status: 500,
@@ -53,7 +59,8 @@ module.exports = async function (context, req) {
       out[keys[i]] = data;
     }
     const yogaDescPath = path.join(baseDataDir, 'yoga-descriptions.json');
-    out.yogaDescriptions = readJsonIfExists(yogaDescPath) || {};
+    const yogaDescriptions = getYogaDescriptionsOverride() || readJsonIfExists(yogaDescPath) || {};
+    out.yogaDescriptions = yogaDescriptions;
     context.res = {
       status: 200,
       body: out,
