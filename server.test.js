@@ -306,6 +306,114 @@ describe('Rashi API Server', () => {
     });
   });
 
+  describe('POST /api/panchang', () => {
+    it('should return malefic windows, hora, and limbs for Mumbai 2026-04-18', async () => {
+      const response = await request(app)
+        .post('/api/panchang')
+        .send({
+          lat: 19.076,
+          lng: 72.8777,
+          timezone: 5.5,
+          date: '2026-04-18',
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      const { data } = response.body;
+      expect(data.dateLocal).toBe('2026-04-18');
+      expect(data.maleficDaytimeWindows).toHaveLength(3);
+      expect(data.hora.day).toHaveLength(12);
+      expect(data.hora.night).toHaveLength(12);
+      expect(data.choghadiya.day).toHaveLength(8);
+      expect(data.limbsAtLocalNoon.nakshatra.name).toBeDefined();
+      expect(data.limbsAtLocalNoon.karana).toMatchObject({
+        name: expect.any(String),
+        serial: expect.any(Number),
+        fixed: expect.any(Boolean),
+      });
+    });
+
+    it('should reject missing date', async () => {
+      const response = await request(app)
+        .post('/api/panchang')
+        .send({ lat: 19.076, lng: 72.8777, timezone: 5.5 })
+        .expect(400);
+      expect(response.body.error).toMatch(/date/i);
+    });
+  });
+
+  describe('karanaFromElongation', () => {
+    const { karanaFromElongation } = require('./panchangService');
+
+    it('maps 0° elongation to Kimstughna', () => {
+      expect(karanaFromElongation(0)).toMatchObject({ name: 'Kimstughna', serial: 0, fixed: true });
+    });
+
+    it('maps first movable slice after Kimstughna to Bava', () => {
+      expect(karanaFromElongation(6)).toMatchObject({ name: 'Bava', serial: 1, fixed: false });
+    });
+  });
+
+  describe('POST /api/choghadiya', () => {
+    it('should reject when lat, lng, or timezone is missing', async () => {
+      const response = await request(app)
+        .post('/api/choghadiya')
+        .send({ lat: 19.076, lng: 72.8777 })
+        .expect(400);
+
+      expect(response.body.error).toMatch(/timezone/i);
+    });
+
+    it('should reject invalid time format', async () => {
+      const response = await request(app)
+        .post('/api/choghadiya')
+        .send({
+          lat: 19.076,
+          lng: 72.8777,
+          timezone: 5.5,
+          date: '2026-04-18',
+          time: 'noon',
+        })
+        .expect(400);
+
+      expect(response.body.error).toMatch(/time/i);
+    });
+
+    /**
+     * Golden: Mumbai, 18 Apr 2026 (Saturday). Swiss Ephemeris sunrise ~00:49 UTC;
+     * first daytime Choghadiya starts with Saturn (Kaal); first night with Venus (Chal) as fifth day lord.
+     * Cross-check style: https://www.drikpanchang.com/muhurat/choghadiya.html (city-specific table).
+     */
+    it('should return eight day and eight night segments with expected rulers for Mumbai 2026-04-18', async () => {
+      const response = await request(app)
+        .post('/api/choghadiya')
+        .send({
+          lat: 19.076,
+          lng: 72.8777,
+          timezone: 5.5,
+          date: '2026-04-18',
+          time: '12:00:00',
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      const { data } = response.body;
+      expect(data.location).toEqual({ lat: 19.076, lng: 72.8777, timezone: 5.5 });
+      expect(data.dateLocal).toBe('2026-04-18');
+      expect(data.weekdayIndex).toBe(6);
+      expect(data.sunrise).toMatch(/^2026-04-18T00:49:1[0-2]\.\d{3}Z$/);
+      expect(data.sunset).toMatch(/^2026-04-18T13:26:4[5-7]\.\d{3}Z$/);
+      expect(data.day).toHaveLength(8);
+      expect(data.night).toHaveLength(8);
+      expect(data.day[0].rulerPlanet).toBe('Saturn');
+      expect(data.day[0].label).toBe('Kaal');
+      expect(data.night[0].rulerPlanet).toBe('Venus');
+      expect(data.night[0].label).toBe('Chal');
+      expect(data.current.phase).toBe('day');
+      expect(data.current.rulerPlanet).toBe('Sun');
+    });
+  });
+
   describe('GET /health', () => {
     it('should return health check status', async () => {
       const response = await request(app)

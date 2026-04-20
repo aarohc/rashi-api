@@ -13,7 +13,8 @@
     "test": "jest --watchman=false",
     "test:watch": "jest --watchman=false --watch",
     "test:coverage": "jest --watchman=false --coverage",
-    "start": "node server.js"
+    "start": "node server.js",
+    "seed:runtime-config": "node scripts/upsert-runtime-config.js"
   },
   "jest": {
     "testEnvironment": "node",

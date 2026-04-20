@@ -8,9 +8,12 @@ const { computeCompatibility } = require('./compatibilityService');
 const { calculatePlanetAspects } = require('./aspectsService');
 const { computeFullRashiData } = require('./chartComputer');
 const { evaluateAllYogas } = require('./yogaService');
+const { computeChoghadiya } = require('./choghadiyaService');
+const { computePanchangDay } = require('./panchangService');
 const { normalizeDateToYmd } = require('./utils');
 const path = require('path');
 const fs = require('fs');
+const { loadRashiRuntimeConfig, getRashiTunable } = require('./rashiRuntimeConfig');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -76,6 +79,14 @@ const swaggerOptions = {
       {
         name: 'Yogas',
         description: 'Classical Vedic yoga (planetary combination) detection'
+      },
+      {
+        name: 'Choghadiya',
+        description: 'Choghadiya muhurat windows from sunrise/sunset at a location (8 day + 8 night segments)'
+      },
+      {
+        name: 'Panchang',
+        description: 'Daily Panchang bundle (Choghadiya, Rahu Kaal, Yamaganda, Gulika, Hora, Abhijit, limbs at noon)'
       }
     ]
   },
@@ -331,6 +342,158 @@ app.post('/api/yogas', (req, res) => {
   } catch (error) {
     console.error('Error computing yogas:', error);
     res.status(500).json({ error: 'Failed to compute yogas' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/choghadiya:
+ *   post:
+ *     summary: Choghadiya for a location (day and night eight-fold divisions)
+ *     description: |
+ *       Computes sunrise and sunset with Swiss Ephemeris, then splits daytime (sunrise→sunset)
+ *       and night (sunset→next sunrise) into eight equal Choghadiya periods.
+ *       Day sequence starts with the weekday lord; night starts with the ruler of the fifth daytime period.
+ *       Optional date/time default to “now” in the given timezone offset. Time is only used to pick the current segment.
+ *     tags: [Choghadiya]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - lat
+ *               - lng
+ *               - timezone
+ *             properties:
+ *               lat:
+ *                 type: number
+ *                 description: Latitude (decimal degrees)
+ *               lng:
+ *                 type: number
+ *                 description: Longitude (decimal degrees)
+ *               timezone:
+ *                 type: number
+ *                 description: Hours east of UTC (e.g. 5.5 for IST, -5 for EST)
+ *               date:
+ *                 type: string
+ *                 description: Local civil date YYYY-MM-DD or DD-MM-YYYY (default today in zone)
+ *               time:
+ *                 type: string
+ *                 description: Local time HH:MM:SS (default now in zone)
+ *     responses:
+ *       200:
+ *         description: Day and night tables and optional current segment
+ *       400:
+ *         description: Bad request
+ *       422:
+ *         description: Rise/set not computable (e.g. extreme latitude)
+ *       500:
+ *         description: Server error
+ */
+app.post('/api/choghadiya', (req, res) => {
+  const { lat, lng, timezone, date, time } = req.body;
+
+  if (lat === undefined || lng === undefined || timezone === undefined) {
+    return res.status(400).json({
+      error: 'Missing required fields: lat, lng, timezone (hours east of UTC). Optional date, time (HH:MM:SS).',
+    });
+  }
+
+  try {
+    const raw = computeChoghadiya({ lat, lng, timezone, date, time });
+    res.json({
+      success: true,
+      data: {
+        location: { lat, lng, timezone },
+        dateLocal: raw.dateLocal,
+        weekdayIndex: raw.weekdayIndex,
+        sunrise: raw.sunriseUtc,
+        sunset: raw.sunsetUtc,
+        nextSunrise: raw.nextSunriseUtc,
+        day: raw.day,
+        night: raw.night,
+        current: raw.current,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error computing Choghadiya:', error);
+    if (error.code === 'NO_RISE_SET' || error.code === 'EPHEMERIS') {
+      return res.status(422).json({ error: error.message || 'Could not compute sunrise or sunset for this location' });
+    }
+    if (error.message && /Invalid|format/i.test(error.message)) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to compute Choghadiya' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/panchang:
+ *   post:
+ *     summary: Daily Panchang bundle for a location and civil date
+ *     description: |
+ *       Choghadiya (day+night), Rahu Kaal / Yamaganda / Gulika (8 daytime eighths), 12+12 Hora,
+ *       Abhijit (omitted Wednesday), Tithi/Nakshatra/Yoga at local noon (vedic-astrology).
+ *     tags: [Panchang]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - lat
+ *               - lng
+ *               - timezone
+ *               - date
+ *             properties:
+ *               lat: { type: number }
+ *               lng: { type: number }
+ *               timezone: { type: number }
+ *               date: { type: string, description: YYYY-MM-DD or DD-MM-YYYY }
+ *     responses:
+ *       200:
+ *         description: Panchang bundle
+ *       400:
+ *         description: Bad request
+ *       422:
+ *         description: Rise/set not computable
+ *       500:
+ *         description: Server error
+ */
+app.post('/api/panchang', (req, res) => {
+  const { lat, lng, timezone, date } = req.body;
+
+  if (lat === undefined || lng === undefined || timezone === undefined || !date) {
+    return res.status(400).json({
+      error: 'Missing required fields: lat, lng, timezone, date (YYYY-MM-DD or DD-MM-YYYY)',
+    });
+  }
+
+  try {
+    const normalizedDate = normalizeDateToYmd(date);
+    const raw = computePanchangDay({ lat, lng, timezone, date: normalizedDate });
+    res.json({
+      success: true,
+      data: {
+        location: { lat, lng, timezone },
+        ...raw,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error computing Panchang:', error);
+    if (error.code === 'NO_RISE_SET' || error.code === 'EPHEMERIS') {
+      return res.status(422).json({ error: error.message || 'Could not compute sunrise or sunset for this location' });
+    }
+    if (error.message && /Invalid|format|required/i.test(error.message)) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to compute Panchang' });
   }
 });
 
@@ -1240,12 +1403,14 @@ if (require.main === module) {
     try {
       const { refreshRashiContentOverrides } = require('./rashiContentOverrides');
       await refreshRashiContentOverrides();
+      await loadRashiRuntimeConfig();
     } catch (e) {
       console.warn('[rashiContentOverrides] startup:', e && e.message ? e.message : e);
     }
-    app.listen(PORT, () => {
-      console.log(`Rashi microservice running on port ${PORT}`);
-      console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
+    const runtimePort = Number.parseInt(getRashiTunable('PORT', String(PORT)), 10) || PORT;
+    app.listen(runtimePort, () => {
+      console.log(`Rashi microservice running on port ${runtimePort}`);
+      console.log(`Swagger documentation available at http://localhost:${runtimePort}/api-docs`);
     });
   })();
 }
