@@ -217,6 +217,63 @@ describe('Rashi API Server', () => {
     });
   });
 
+  describe('POST /api/compatibility', () => {
+    it('should return a normalized compatibility payload', async () => {
+      const response = await request(app)
+        .post('/api/compatibility')
+        .send({ person1: testData, person2: testData })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty('totalScore');
+      expect(response.body.data).toHaveProperty('normalizedScore');
+      expect(response.body.data).toHaveProperty('level');
+      expect(response.body.data).toHaveProperty('compatible');
+      expect(Array.isArray(response.body.data.details)).toBe(true);
+      expect(typeof response.body.data.totalScore).toBe('number');
+      expect(response.body.data.totalScore).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should return 400 when person2 is missing', async () => {
+      const response = await request(app)
+        .post('/api/compatibility')
+        .send({ person1: testData })
+        .expect(400);
+
+      expect(response.body.error).toContain('Missing required fields');
+    });
+  });
+
+  describe('POST /api/ashtakoot', () => {
+    it('should return classical compatibility with nakshatra payload', async () => {
+      const response = await request(app)
+        .post('/api/ashtakoot')
+        .send({ person1: testData, person2: testData })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty('totalScore');
+      expect(response.body.data).toHaveProperty('nakshatra');
+      expect(response.body.data.nakshatra).toHaveProperty('person1');
+      expect(response.body.data.nakshatra).toHaveProperty('person2');
+      expect(response.body.data.nakshatra).toHaveProperty('yoniScore');
+      expect(response.body.data.nakshatra.person1).toHaveProperty('name');
+      expect(response.body.data.nakshatra.person2).toHaveProperty('animal');
+      expect(typeof response.body.data.nakshatra.yoniScore).toBe('number');
+    });
+
+    it('should return 400 for missing required compatibility fields', async () => {
+      const badPerson = { ...testData };
+      delete badPerson.time;
+      const response = await request(app)
+        .post('/api/ashtakoot')
+        .send({ person1: badPerson, person2: testData })
+        .expect(400);
+
+      expect(response.body.error).toContain('Missing required field');
+    });
+  });
+
   describe('POST /api/horoscope', () => {
     it('should successfully generate horoscope SVG', async () => {
       const response = await request(app)

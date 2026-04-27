@@ -44,18 +44,48 @@ function interpretCompatibilityScore(totalScore, threshold = 0.4) {
   };
 }
 
-function computeCompatibility(person1, person2, threshold) {
+function toFiniteScore(rawScore) {
+  if (typeof rawScore === 'number' && Number.isFinite(rawScore)) return rawScore;
+  if (rawScore && typeof rawScore.total_score === 'number' && Number.isFinite(rawScore.total_score)) {
+    return rawScore.total_score;
+  }
+  return 0;
+}
+
+function computeClassicalCompatibility(person1, person2, threshold) {
   const bd1 = normalizeBirthDetails(person1);
   const bd2 = normalizeBirthDetails(person2);
 
   const rawScore = vedicAstrology.compatibility.getCompatibilityScore(
     bd1,
-    bd2,
-    threshold
+    bd2
   );
 
-  const totalScore = rawScore.total_score ?? rawScore;
+  const totalScore = toFiniteScore(rawScore);
   const interpretation = interpretCompatibilityScore(totalScore, threshold);
+  const details = rawScore && rawScore.interim ? rawScore.interim : [];
+
+  // This is the currently available classical signal in the library.
+  const person1BirthChart = vedicAstrology.positioner.getBirthChart(
+    bd1.dateString,
+    bd1.timeString,
+    bd1.lat,
+    bd1.lng,
+    bd1.timezone
+  );
+  const person2BirthChart = vedicAstrology.positioner.getBirthChart(
+    bd2.dateString,
+    bd2.timeString,
+    bd2.lat,
+    bd2.lng,
+    bd2.timezone
+  );
+  const nakshatra1 = vedicAstrology.compatibility.calculateNakshatra(person1BirthChart);
+  const nakshatra2 = vedicAstrology.compatibility.calculateNakshatra(person2BirthChart);
+  const yoniScore = vedicAstrology.compatibility.calculateNakshatraCompatibility(
+    nakshatra1.animal,
+    nakshatra2.animal
+  );
 
   return {
     totalScore,
@@ -63,12 +93,30 @@ function computeCompatibility(person1, person2, threshold) {
     level: interpretation.level,
     helpText: interpretation.helpText,
     compatible: interpretation.compatible,
-    details: rawScore.interim ?? []
+    details,
+    nakshatra: {
+      person1: nakshatra1,
+      person2: nakshatra2,
+      yoniScore
+    }
+  };
+}
+
+function computeCompatibility(person1, person2, threshold) {
+  const classical = computeClassicalCompatibility(person1, person2, threshold);
+  return {
+    totalScore: classical.totalScore,
+    normalizedScore: classical.normalizedScore,
+    level: classical.level,
+    helpText: classical.helpText,
+    compatible: classical.compatible,
+    details: classical.details
   };
 }
 
 module.exports = {
-  computeCompatibility
+  computeCompatibility,
+  computeClassicalCompatibility
 };
 
 

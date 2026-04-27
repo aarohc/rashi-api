@@ -4,7 +4,7 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const { generateHoroscopeSVG } = require('./horoscopeGenerator');
 const { generateVimshottariDasha, getPratyadashaForYear, getMuddaDashaForYear } = require('./vimshottariService');
-const { computeCompatibility } = require('./compatibilityService');
+const { computeCompatibility, computeClassicalCompatibility } = require('./compatibilityService');
 const { calculatePlanetAspects } = require('./aspectsService');
 const { computeFullRashiData } = require('./chartComputer');
 const { evaluateAllYogas } = require('./yogaService');
@@ -999,6 +999,72 @@ app.post('/api/compatibility', (req, res) => {
   } catch (error) {
     console.error('Error computing compatibility:', error);
     res.status(500).json({ error: 'Failed to compute compatibility' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/ashtakoot:
+ *   post:
+ *     summary: Classical compatibility payload for two birth charts
+ *     description: Returns normalized classical compatibility score with current breakdown details and nakshatra/yoni signal. This endpoint is designed as the stable classical contract for life-partner compatibility.
+ *     tags: [Compatibility]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - person1
+ *               - person2
+ *             properties:
+ *               person1:
+ *                 type: object
+ *               person2:
+ *                 type: object
+ *               threshold:
+ *                 type: number
+ *                 example: 0.4
+ *     responses:
+ *       200:
+ *         description: Classical compatibility computed successfully
+ *       400:
+ *         description: Missing fields
+ *       500:
+ *         description: Internal server error
+ */
+app.post('/api/ashtakoot', (req, res) => {
+  const { person1, person2, threshold } = req.body || {};
+
+  if (!person1 || !person2) {
+    return res
+      .status(400)
+      .json({ error: 'Missing required fields: person1, person2' });
+  }
+
+  const requiredFields = ['date', 'time', 'lat', 'lng', 'timezone'];
+  for (const [idx, person] of [person1, person2].entries()) {
+    const label = idx === 0 ? 'person1' : 'person2';
+    for (const f of requiredFields) {
+      if (person[f] === undefined || person[f] === null || person[f] === '') {
+        return res
+          .status(400)
+          .json({ error: `Missing required field for ${label}: ${f}` });
+      }
+    }
+  }
+
+  try {
+    const result = computeClassicalCompatibility(person1, person2, threshold);
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error computing ashtakoot compatibility:', error);
+    res.status(500).json({ error: 'Failed to compute ashtakoot compatibility' });
   }
 });
 
