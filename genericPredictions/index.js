@@ -38,8 +38,22 @@ module.exports = async function (context, req) {
     const locale = (req && req.query && req.query.locale) ? String(req.query.locale).toLowerCase() : 'en';
     const dataDir = getDataDirForLocale(baseDataDir, locale);
     const enDir = locale === 'en' ? dataDir : getDataDirForLocale(baseDataDir, 'en');
-    const files = ['planet.json', 'house.json', 'dasha-generic.json', 'dasha-maha.json', 'pratyadasha-generic.json'];
-    const keys = ['planetInHouse', 'houseByRashi', 'dashaGeneric', 'dashaMaha', 'pratyadashaGeneric'];
+    const files = [
+      'planet.json',
+      'house.json',
+      'dasha-generic.json',
+      'dasha-maha.json',
+      'pratyadasha-generic.json',
+      'shani-moon-transit-phases.json'
+    ];
+    const keys = [
+      'planetInHouse',
+      'houseByRashi',
+      'dashaGeneric',
+      'dashaMaha',
+      'pratyadashaGeneric',
+      'shaniMoonPhases'
+    ];
     const out = {};
     for (let i = 0; i < files.length; i++) {
       const stem = files[i].replace(/\.json$/i, '');

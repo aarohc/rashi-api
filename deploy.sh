@@ -136,6 +136,11 @@ if ! echo "$GENERIC_BODY" | grep -q '"planetInHouse"'; then
     echo "Response: $(echo "$GENERIC_BODY" | head -c 500)"
     exit 1
 fi
+if ! echo "$GENERIC_BODY" | grep -q '"shaniMoonPhases"'; then
+    echo "❌ generic-predictions response missing shaniMoonPhases"
+    echo "Response: $(echo "$GENERIC_BODY" | head -c 500)"
+    exit 1
+fi
 echo "✓ generic-predictions OK (HTTP $GENERIC_CODE)"
 
 # Verify pratyadasha endpoint (POST with minimal valid payload)
@@ -158,6 +163,99 @@ if ! echo "$PRATYADASHA_BODY" | grep -q 'pratyadashaSegments'; then
 fi
 echo "✓ pratyadasha OK (HTTP $PRATYADASHA_CODE)"
 
+echo "🔍 Verifying /api/mudda-dasha..."
+MUDDA_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/mudda-dasha" -H "Content-Type: application/json" -d "$PRATYADASHA_PAYLOAD")
+MUDDA_CODE=$(echo "$MUDDA_RESPONSE" | tail -n1)
+MUDDA_BODY=$(echo "$MUDDA_RESPONSE" | sed '$d')
+if [ "$MUDDA_CODE" != "200" ]; then
+    echo "❌ mudda-dasha failed: HTTP $MUDDA_CODE"
+    echo "Full response body:"
+    echo "$MUDDA_BODY"
+    echo "---"
+    exit 1
+fi
+if ! echo "$MUDDA_BODY" | grep -q 'muddaSegments'; then
+    echo "❌ mudda-dasha response missing muddaSegments"
+    echo "Response: $(echo "$MUDDA_BODY" | head -c 500)"
+    exit 1
+fi
+echo "✓ mudda-dasha OK (HTTP $MUDDA_CODE)"
+
+echo "🔍 Verifying /api/shani-moon-transit..."
+SHANI_PAYLOAD='{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5,"windowStart":"2020-01-01","windowEnd":"2025-12-31"}'
+SHANI_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/shani-moon-transit" -H "Content-Type: application/json" -d "$SHANI_PAYLOAD")
+SHANI_CODE=$(echo "$SHANI_RESPONSE" | tail -n1)
+SHANI_BODY=$(echo "$SHANI_RESPONSE" | sed '$d')
+if [ "$SHANI_CODE" != "200" ]; then
+    echo "❌ shani-moon-transit failed: HTTP $SHANI_CODE"
+    echo "Full response body:"
+    echo "$SHANI_BODY"
+    echo "---"
+    exit 1
+fi
+if ! echo "$SHANI_BODY" | grep -q 'currentPhase'; then
+    echo "❌ shani-moon-transit response missing currentPhase"
+    echo "Response: $(echo "$SHANI_BODY" | head -c 500)"
+    exit 1
+fi
+echo "✓ shani-moon-transit OK (HTTP $SHANI_CODE)"
+
+echo "🔍 Verifying /api/ashtakoot..."
+COMPAT_PAYLOAD='{"person1":{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5},"person2":{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5}}'
+ASHTAKOOT_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/ashtakoot" -H "Content-Type: application/json" -d "$COMPAT_PAYLOAD")
+ASHTAKOOT_CODE=$(echo "$ASHTAKOOT_RESPONSE" | tail -n1)
+ASHTAKOOT_BODY=$(echo "$ASHTAKOOT_RESPONSE" | sed '$d')
+if [ "$ASHTAKOOT_CODE" != "200" ]; then
+    echo "❌ ashtakoot failed: HTTP $ASHTAKOOT_CODE"
+    echo "Full response body:"
+    echo "$ASHTAKOOT_BODY"
+    echo "---"
+    exit 1
+fi
+if ! echo "$ASHTAKOOT_BODY" | grep -q 'nakshatra'; then
+    echo "❌ ashtakoot response missing nakshatra"
+    echo "Response: $(echo "$ASHTAKOOT_BODY" | head -c 500)"
+    exit 1
+fi
+echo "✓ ashtakoot OK (HTTP $ASHTAKOOT_CODE)"
+
+echo "🔍 Verifying /api/choghadiya..."
+CHOGHADIYA_PAYLOAD='{"date":"2026-04-18","time":"10:30:00","lat":19.076,"lng":72.8777,"timezone":5.5}'
+CHOGHADIYA_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/choghadiya" -H "Content-Type: application/json" -d "$CHOGHADIYA_PAYLOAD")
+CHOGHADIYA_CODE=$(echo "$CHOGHADIYA_RESPONSE" | tail -n1)
+CHOGHADIYA_BODY=$(echo "$CHOGHADIYA_RESPONSE" | sed '$d')
+if [ "$CHOGHADIYA_CODE" != "200" ]; then
+    echo "❌ choghadiya failed: HTTP $CHOGHADIYA_CODE"
+    echo "Full response body:"
+    echo "$CHOGHADIYA_BODY"
+    echo "---"
+    exit 1
+fi
+if ! echo "$CHOGHADIYA_BODY" | grep -q '"day"'; then
+    echo "❌ choghadiya response missing day segments"
+    echo "Response: $(echo "$CHOGHADIYA_BODY" | head -c 500)"
+    exit 1
+fi
+echo "✓ choghadiya OK (HTTP $CHOGHADIYA_CODE)"
+
+echo "🔍 Verifying /api/planetaspects..."
+PLANETASPECTS_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/planetaspects" -H "Content-Type: application/json" -d "$PRATYADASHA_PAYLOAD")
+PLANETASPECTS_CODE=$(echo "$PLANETASPECTS_RESPONSE" | tail -n1)
+PLANETASPECTS_BODY=$(echo "$PLANETASPECTS_RESPONSE" | sed '$d')
+if [ "$PLANETASPECTS_CODE" != "200" ]; then
+    echo "❌ planetaspects failed: HTTP $PLANETASPECTS_CODE"
+    echo "Full response body:"
+    echo "$PLANETASPECTS_BODY"
+    echo "---"
+    exit 1
+fi
+if ! echo "$PLANETASPECTS_BODY" | grep -q 'aspectsByPlanet'; then
+    echo "❌ planetaspects response missing aspectsByPlanet"
+    echo "Response: $(echo "$PLANETASPECTS_BODY" | head -c 500)"
+    exit 1
+fi
+echo "✓ planetaspects OK (HTTP $PLANETASPECTS_CODE)"
+
 echo ""
 echo "✅ Deployment and verification complete!"
 echo "🌐 Function App URL: ${BASE_URL}"
@@ -168,7 +266,12 @@ echo "   - GET  ${BASE_URL}/api/generic-predictions"
 echo "   - POST ${BASE_URL}/api/rashi"
 echo "   - POST ${BASE_URL}/api/vimshottari"
 echo "   - POST ${BASE_URL}/api/pratyadasha"
+echo "   - POST ${BASE_URL}/api/mudda-dasha"
+echo "   - POST ${BASE_URL}/api/shani-moon-transit"
 echo "   - POST ${BASE_URL}/api/compatibility"
+echo "   - POST ${BASE_URL}/api/ashtakoot"
+echo "   - POST ${BASE_URL}/api/choghadiya"
+echo "   - POST ${BASE_URL}/api/planetaspects"
 echo "   - POST ${BASE_URL}/api/horoscope"
 echo ""
 echo "💡 Update RASHI_API_URL in cosmicconnect-api (and production env) to: ${BASE_URL}"

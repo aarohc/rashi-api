@@ -4,6 +4,8 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const { generateHoroscopeSVG } = require('./horoscopeGenerator');
 const { generateVimshottariDasha, getPratyadashaForYear, getMuddaDashaForYear } = require('./vimshottariService');
+const { computeFamilyDashaWindow } = require('./familyDashaService');
+const { computeShaniMoonTransit, currentPhaseAt } = require('./shaniMoonTransitService');
 const { computeCompatibility, computeClassicalCompatibility } = require('./compatibilityService');
 const { calculatePlanetAspects } = require('./aspectsService');
 const { computeFullRashiData } = require('./chartComputer');
@@ -87,6 +89,10 @@ const swaggerOptions = {
       {
         name: 'Panchang',
         description: 'Daily Panchang bundle (Choghadiya, Rahu Kaal, Yamaganda, Gulika, Hora, Abhijit, limbs at noon)'
+      },
+      {
+        name: 'ShaniMoonTransit',
+        description: 'Sade Sati and Dhaiya (Saturn transit vs natal Moon)'
       }
     ]
   },
@@ -1369,8 +1375,22 @@ app.get('/api/generic-predictions', async (req, res) => {
     const locale = (req.query.locale && String(req.query.locale).toLowerCase()) || 'en';
     const dataDir = getGenericPredictionsDataDir(baseDataDir, locale);
     const enDir = locale === 'en' ? dataDir : getGenericPredictionsDataDir(baseDataDir, 'en');
-    const files = ['planet.json', 'house.json', 'dasha-generic.json', 'dasha-maha.json', 'pratyadasha-generic.json'];
-    const keys = ['planetInHouse', 'houseByRashi', 'dashaGeneric', 'dashaMaha', 'pratyadashaGeneric'];
+    const files = [
+      'planet.json',
+      'house.json',
+      'dasha-generic.json',
+      'dasha-maha.json',
+      'pratyadasha-generic.json',
+      'shani-moon-transit-phases.json'
+    ];
+    const keys = [
+      'planetInHouse',
+      'houseByRashi',
+      'dashaGeneric',
+      'dashaMaha',
+      'pratyadashaGeneric',
+      'shaniMoonPhases'
+    ];
     const out = {};
     for (let i = 0; i < files.length; i++) {
       const stem = files[i].replace(/\.json$/i, '');
@@ -1456,6 +1476,160 @@ app.get('/version', (req, res) => {
  *                   type: string
  *                   example: "Rashi Microservice"
  */
+/**
+ * @swagger
+ * /api/family-dasha-window:
+ *   post:
+ *     summary: Batch Vimshottari Maha+Antar segments for N family members within a date window
+ *     description: |
+ *       Returns per-member Maha+Antar segments that intersect [windowStart, windowEnd] plus the next
+ *       Antar transition after now (even if outside the window). Includes a deterministic household
+ *       overview (transition clusters within ±14 days, dominant lord themes, key bullet keys).
+ *     tags: [Vimshottari]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [members, windowStart, windowEnd]
+ *             properties:
+ *               members:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [id, date, time, lat, lng, timezone]
+ *                   properties:
+ *                     id: { type: string }
+ *                     displayName: { type: string }
+ *                     date: { type: string, example: "1979-09-05" }
+ *                     time: { type: string, example: "19:35:00" }
+ *                     lat: { type: number }
+ *                     lng: { type: number }
+ *                     timezone: { type: number }
+ *               windowStart: { type: string, format: date-time }
+ *               windowEnd: { type: string, format: date-time }
+ *     responses:
+ *       200:
+ *         description: Family dasha window payload
+ *       400:
+ *         description: Invalid window or missing fields
+ */
+app.post('/api/family-dasha-window', (req, res) => {
+  const { members, windowStart, windowEnd } = req.body || {};
+  if (!Array.isArray(members) || !windowStart || !windowEnd) {
+    return res.status(400).json({ error: 'Missing required fields: members[], windowStart, windowEnd' });
+  }
+  if (members.length > 25) {
+    return res.status(400).json({ error: 'Too many members (max 25)' });
+  }
+  try {
+    const data = computeFamilyDashaWindow({ members, windowStart, windowEnd });
+    return res.json({ success: true, data, timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('Error computing family dasha window:', error);
+    return res.status(400).json({ error: error.message || 'Failed to compute family dasha window' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/shani-moon-transit:
+ *   post:
+ *     summary: Sade Sati + Dhaiya segments (Saturn vs natal Moon)
+ *     description: |
+ *       Whole-sign phases from natal Moon: Sade Sati (12th, 1st, 2nd) and Dhaiya (4th, 8th).
+ *       Lahiri sidereal; daily sample at local noon; segment boundaries at local midnight.
+ *     tags: [ShaniMoonTransit]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [date, time, lat, lng, timezone, windowStart, windowEnd]
+ *             properties:
+ *               date: { type: string, example: "1990-06-15" }
+ *               time: { type: string, example: "14:30:00" }
+ *               lat: { type: number }
+ *               lng: { type: number }
+ *               timezone: { type: number, description: "Hours east of UTC" }
+ *               windowStart: { type: string, example: "2010-01-01", description: "yyyy-mm-dd inclusive" }
+ *               windowEnd: { type: string, example: "2040-12-31" }
+ *     responses:
+ *       200:
+ *         description: Moon reference + segments
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Server error
+ */
+app.post('/api/shani-moon-transit', (req, res) => {
+  const { date, time, lat, lng, timezone, windowStart, windowEnd } = req.body || {};
+
+  if (
+    !date ||
+    !time ||
+    lat === undefined ||
+    lng === undefined ||
+    timezone === undefined ||
+    !windowStart ||
+    !windowEnd
+  ) {
+    return res.status(400).json({
+      error:
+        'Missing required fields: date, time, lat, lng, timezone, windowStart, windowEnd (window dates as yyyy-mm-dd)'
+    });
+  }
+
+  try {
+    let normalizedDate = date;
+    const ddmmyyyyPattern = /^(\d{2})-(\d{2})-(\d{4})$/;
+    const match = date.match(ddmmyyyyPattern);
+    if (match) {
+      const [, day, month, yearPart] = match;
+      normalizedDate = `${yearPart}-${month}-${day}`;
+    }
+
+    const ws = String(windowStart).slice(0, 10);
+    const we = String(windowEnd).slice(0, 10);
+
+    const data = computeShaniMoonTransit({
+      date: normalizedDate,
+      time,
+      lat: Number(lat),
+      lng: Number(lng),
+      timezone: Number(timezone),
+      windowStart: ws,
+      windowEnd: we
+    });
+
+    const nowInfo = currentPhaseAt({
+      date: normalizedDate,
+      time,
+      lat: Number(lat),
+      lng: Number(lng),
+      timezone: Number(timezone)
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        ...data,
+        currentPhase: nowInfo
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error computing shani-moon-transit:', error);
+    const msg = error && error.message ? String(error.message) : 'Failed to compute shani-moon-transit';
+    if (msg.includes('windowStart') || msg.includes('before')) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.status(500).json({ error: 'Failed to compute shani-moon-transit', detail: msg });
+  }
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', service: 'Rashi Microservice' });
 });

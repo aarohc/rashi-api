@@ -4,7 +4,7 @@
  * disk JSON under data/ is fallback (see generic-predictions route: Mongo first, then file read).
  *
  * _id pattern: generic:<fileStem>:<locale>
- *   fileStem: planet | house | dasha-generic | dasha-maha | pratyadasha-generic
+ *   fileStem: planet | house | dasha-generic | dasha-maha | pratyadasha-generic | shani-moon-transit-phases
  *   locale: en | es | gu | hi
  * Yoga descriptions file (root data/): _id = yoga-descriptions
  *
