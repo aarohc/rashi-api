@@ -10,9 +10,8 @@ FUNCTION_APP_NAME="${AZURE_FUNCTION_APP_NAME:-rashi-api-function}"
 RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-rashi-api-group}"
 LOCATION="${AZURE_LOCATION:-eastus}"
 NODE_VERSION="22"
-# Generate a valid storage account name (3-24 chars, lowercase alphanumeric only)
-STORAGE_SUFFIX=$(date +%s | tail -c 5)
-STORAGE_ACCOUNT_NAME="rashi$(echo $STORAGE_SUFFIX | tr '[:upper:]' '[:lower:]')"
+# Fixed storage account name so we reuse on redeploy (override with AZURE_STORAGE_ACCOUNT_NAME). 3-24 chars, lowercase alphanumeric.
+STORAGE_ACCOUNT_NAME="${AZURE_STORAGE_ACCOUNT_NAME:-rashiastrovoyages}"
 
 echo "🚀 Deploying rashi-api to Azure Functions..."
 echo "Function App Name: $FUNCTION_APP_NAME"

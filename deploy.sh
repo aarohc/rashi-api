@@ -33,16 +33,20 @@ fi
 echo "📦 Creating resource group if it doesn't exist..."
 az group create --name "$RESOURCE_GROUP" --location "$LOCATION" || true
 
-# Create storage account (required for Azure Functions)
-# Azure limit: 3-24 chars, lowercase alphanumeric only
-STORAGE_SUFFIX=$(date +%s | tail -c 6)
-STORAGE_ACCOUNT_NAME="rashi${STORAGE_SUFFIX}"
-echo "💾 Creating storage account: $STORAGE_ACCOUNT_NAME"
-az storage account create \
-    --name "$STORAGE_ACCOUNT_NAME" \
-    --location "$LOCATION" \
-    --resource-group "$RESOURCE_GROUP" \
-    --sku Standard_LRS || true
+# Use a fixed storage account name so we reuse the same account on redeploy (required for Azure Functions).
+# Override with AZURE_STORAGE_ACCOUNT_NAME if needed (e.g. name taken globally). Azure: 3-24 chars, lowercase alphanumeric.
+STORAGE_ACCOUNT_NAME="${AZURE_STORAGE_ACCOUNT_NAME:-rashiastrovoyages}"
+echo "💾 Using storage account: $STORAGE_ACCOUNT_NAME"
+if az storage account show --name "$STORAGE_ACCOUNT_NAME" --resource-group "$RESOURCE_GROUP" &>/dev/null; then
+    echo "   (already exists in $RESOURCE_GROUP, reusing)"
+else
+    echo "   Creating in $RESOURCE_GROUP..."
+    az storage account create \
+        --name "$STORAGE_ACCOUNT_NAME" \
+        --location "$LOCATION" \
+        --resource-group "$RESOURCE_GROUP" \
+        --sku Standard_LRS
+fi
 
 # Create Function App
 echo "⚡ Creating Function App..."
@@ -86,6 +90,43 @@ echo ""
 echo "⏳ Waiting 120s for deployment and remote build to finish..."
 sleep 120
 
+# ---------------------------------------------------------------------------
+# Post-deploy: verify every HTTP trigger (catches 404 / missing function)
+# ---------------------------------------------------------------------------
+RASHI_BIRTH_JSON='{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5}'
+PRATYADASHA_JSON='{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5,"year":2025}'
+COMPAT_TWO_JSON='{"person1":{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5},"person2":{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5}}'
+SHANI_JSON='{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5,"windowStart":"2020-01-01","windowEnd":"2025-12-31"}'
+FAMILY_DASHA_JSON='{"members":[{"id":"t","displayName":"Test","date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5}],"windowStart":"2025-01-01T00:00:00.000Z","windowEnd":"2026-01-01T00:00:00.000Z"}'
+PANCHANG_JSON='{"date":"1990-01-15","lat":28.6,"lng":77.2,"timezone":5.5}'
+CHOGHADIYA_JSON='{"date":"2026-04-18","time":"10:30:00","lat":19.076,"lng":72.8777,"timezone":5.5}'
+
+rashi_verify_post() {
+  local label="$1"
+  local path="$2"
+  local payload="$3"
+  local pattern="$4"
+  echo "🔍 Verifying ${path}..."
+  local raw code body
+  raw=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}${path}" \
+    -H "Content-Type: application/json" \
+    -d "$payload")
+  code=$(echo "$raw" | tail -n1)
+  body=$(echo "$raw" | sed '$d')
+  if [ "$code" != "200" ]; then
+    echo "❌ ${label} failed: HTTP $code"
+    echo "$body"
+    exit 1
+  fi
+  # Use ERE so JSON can be minified ("success":true) or pretty ("success": true)
+  if [ -n "$pattern" ] && ! echo "$body" | grep -Eq "$pattern"; then
+    echo "❌ ${label}: response missing pattern ${pattern}"
+    echo "$(echo "$body" | head -c 600)"
+    exit 1
+  fi
+  echo "✓ ${label} OK (HTTP $code)"
+}
+
 # Verify health endpoint (retry up to 4 times - cold start and sync can be slow)
 echo ""
 echo "🔍 Verifying /api/health..."
@@ -117,54 +158,78 @@ for attempt in 1 2 3 4; do
     fi
 done
 
-# Verify generic-predictions endpoint
-echo "🔍 Verifying /api/generic-predictions..."
-GENERIC_RESPONSE=$(curl -s -w "\n%{http_code}" "${BASE_URL}/api/generic-predictions")
-GENERIC_CODE=$(echo "$GENERIC_RESPONSE" | tail -n1)
-GENERIC_BODY=$(echo "$GENERIC_RESPONSE" | sed '$d')
-if [ "$GENERIC_CODE" != "200" ]; then
-    echo "❌ generic-predictions failed: HTTP $GENERIC_CODE"
-    echo "Response: $(echo "$GENERIC_BODY" | head -c 500)"
-    exit 1
-fi
-if ! echo "$GENERIC_BODY" | grep -q '"planetInHouse"'; then
-    echo "❌ generic-predictions response missing planetInHouse"
-    echo "Response: $(echo "$GENERIC_BODY" | head -c 500)"
-    exit 1
-fi
-echo "✓ generic-predictions OK (HTTP $GENERIC_CODE)"
+echo ""
+echo "Verifying all API routes (every function.json route)..."
 
-# Verify pratyadasha endpoint (POST with minimal valid payload)
-echo "🔍 Verifying /api/pratyadasha..."
-PRATYADASHA_PAYLOAD='{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5,"year":2025}'
-PRATYADASHA_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/pratyadasha" -H "Content-Type: application/json" -d "$PRATYADASHA_PAYLOAD")
-PRATYADASHA_CODE=$(echo "$PRATYADASHA_RESPONSE" | tail -n1)
-PRATYADASHA_BODY=$(echo "$PRATYADASHA_RESPONSE" | sed '$d')
-if [ "$PRATYADASHA_CODE" != "200" ]; then
-    echo "❌ pratyadasha failed: HTTP $PRATYADASHA_CODE"
-    echo "Full response body:"
-    echo "$PRATYADASHA_BODY"
-    echo "---"
-    exit 1
+echo "🔍 Verifying /api/generic-predictions..."
+GEN_RAW=$(curl -s -w "\n%{http_code}" "${BASE_URL}/api/generic-predictions")
+GEN_CODE=$(echo "$GEN_RAW" | tail -n1)
+GEN_BODY=$(echo "$GEN_RAW" | sed '$d')
+if [ "$GEN_CODE" != "200" ]; then
+  echo "❌ generic-predictions failed: HTTP $GEN_CODE"
+  echo "$GEN_BODY"
+  exit 1
 fi
-if ! echo "$PRATYADASHA_BODY" | grep -q 'pratyadashaSegments'; then
-    echo "❌ pratyadasha response missing pratyadashaSegments"
-    echo "Response: $(echo "$PRATYADASHA_BODY" | head -c 500)"
+for needle in planetInHouse shaniMoonPhases; do
+  if ! echo "$GEN_BODY" | grep -q "$needle"; then
+    echo "❌ generic-predictions response missing ${needle}"
+    echo "$(echo "$GEN_BODY" | head -c 600)"
     exit 1
+  fi
+done
+echo "✓ generic-predictions OK (HTTP $GEN_CODE)"
+
+rashi_verify_post "rashi" "/api/rashi" "$RASHI_BIRTH_JSON" 'Ascendant'
+rashi_verify_post "vimshottari" "/api/vimshottari" "$RASHI_BIRTH_JSON" 'mahaDashas'
+rashi_verify_post "pratyadasha" "/api/pratyadasha" "$PRATYADASHA_JSON" 'pratyadashaSegments'
+rashi_verify_post "mudda-dasha" "/api/mudda-dasha" "$PRATYADASHA_JSON" 'muddaSegments'
+rashi_verify_post "yogas" "/api/yogas" "$RASHI_BIRTH_JSON" '"yogas"'
+rashi_verify_post "panchang" "/api/panchang" "$PANCHANG_JSON" 'sunriseUtc'
+rashi_verify_post "shani-moon-transit" "/api/shani-moon-transit" "$SHANI_JSON" 'currentPhase'
+rashi_verify_post "ashtakoot" "/api/ashtakoot" "$COMPAT_TWO_JSON" 'nakshatra'
+rashi_verify_post "compatibility" "/api/compatibility" "$COMPAT_TWO_JSON" '"success"[[:space:]]*:[[:space:]]*true'
+rashi_verify_post "family-dasha-window" "/api/family-dasha-window" "$FAMILY_DASHA_JSON" '"lanes"'
+rashi_verify_post "choghadiya" "/api/choghadiya" "$CHOGHADIYA_JSON" '"day"'
+rashi_verify_post "planetaspects" "/api/planetaspects" "$RASHI_BIRTH_JSON" 'aspectsByPlanet'
+
+echo "🔍 Verifying /api/horoscope (JSON)..."
+HORO_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "${BASE_URL}/api/horoscope" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d "$RASHI_BIRTH_JSON")
+HORO_CODE=$(echo "$HORO_RESPONSE" | tail -n1)
+HORO_BODY=$(echo "$HORO_RESPONSE" | sed '$d')
+if [ "$HORO_CODE" != "200" ]; then
+  echo "❌ horoscope failed: HTTP $HORO_CODE"
+  echo "$HORO_BODY"
+  exit 1
 fi
-echo "✓ pratyadasha OK (HTTP $PRATYADASHA_CODE)"
+if ! echo "$HORO_BODY" | grep -q '"svg"'; then
+  echo "❌ horoscope JSON missing svg"
+  echo "$(echo "$HORO_BODY" | head -c 600)"
+  exit 1
+fi
+echo "✓ horoscope OK (HTTP $HORO_CODE)"
 
 echo ""
 echo "✅ Deployment and verification complete!"
 echo "🌐 Function App URL: ${BASE_URL}"
 echo ""
-echo "📝 Available endpoints:"
+echo "📝 Available endpoints (all verified above after publish):"
 echo "   - GET  ${BASE_URL}/api/health"
 echo "   - GET  ${BASE_URL}/api/generic-predictions"
 echo "   - POST ${BASE_URL}/api/rashi"
 echo "   - POST ${BASE_URL}/api/vimshottari"
 echo "   - POST ${BASE_URL}/api/pratyadasha"
+echo "   - POST ${BASE_URL}/api/mudda-dasha"
+echo "   - POST ${BASE_URL}/api/yogas"
+echo "   - POST ${BASE_URL}/api/panchang"
+echo "   - POST ${BASE_URL}/api/shani-moon-transit"
+echo "   - POST ${BASE_URL}/api/ashtakoot"
 echo "   - POST ${BASE_URL}/api/compatibility"
+echo "   - POST ${BASE_URL}/api/family-dasha-window"
+echo "   - POST ${BASE_URL}/api/choghadiya"
+echo "   - POST ${BASE_URL}/api/planetaspects"
 echo "   - POST ${BASE_URL}/api/horoscope"
 echo ""
 echo "💡 Update RASHI_API_URL in cosmicconnect-api (and production env) to: ${BASE_URL}"

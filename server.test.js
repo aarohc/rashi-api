@@ -1,20 +1,37 @@
 const request = require('supertest');
 const app = require('./server');
 
+function responseBodyAsString(res) {
+  if (typeof res.text === 'string' && res.text.length) return res.text;
+  if (typeof res.body === 'string') return res.body;
+  if (Buffer.isBuffer(res.body)) return res.body.toString('utf8');
+  return '';
+}
+
 describe('Rashi API Server', () => {
+  // Test data: 5th September 1979, 19:35, Surat, Gujarat, India
+  const testData = {
+    date: '1979-09-05',
+    time: '19:35:00',
+    lat: 21.1702,
+    lng: 72.8311,
+    timezone: 5.5,
+  };
+
+  describe('GET /api/generic-predictions', () => {
+    it('should include outer planets in planetInHouse', async () => {
+      const response = await request(app).get('/api/generic-predictions?locale=en').expect(200);
+      const { planetInHouse } = response.body;
+      expect(planetInHouse).toBeDefined();
+      for (const p of ['Uranus', 'Neptune', 'Pluto']) {
+        expect(planetInHouse).toHaveProperty(p);
+        expect(Object.keys(planetInHouse[p])).toHaveLength(12);
+        expect(planetInHouse[p]['1']).toMatch(new RegExp(`### ${p} in`));
+      }
+    });
+  });
 
   describe('POST /api/rashi', () => {
-    // Test data: 5th September 1979, 19:35, Surat, Gujarat, India
-    // Note: vedic-astrology expects date in yyyy-mm-dd format and timezone as a number (offset in hours)
-    // Expected results match rashi.json: Ascendant=12, Sun=5, Moon=11, etc.
-    const testData = {
-      date: '1979-09-05',  // yyyy-mm-dd format (or dd-mm-yyyy will be auto-converted)
-      time: '19:35:00',    // 7:35 PM (19:35) - corrected from 17:35
-      lat: 21.1702,  // Surat, Gujarat, India latitude
-      lng: 72.8311,  // Surat, Gujarat, India longitude
-      timezone: 5.5  // India timezone offset (IST - UTC+5:30 = 5.5 hours)
-    };
-
     it('should successfully compute Rashi data for the given birth details', async () => {
       const response = await request(app)
         .post('/api/rashi')
@@ -182,6 +199,81 @@ describe('Rashi API Server', () => {
     });
   });
 
+  describe('POST /api/yogas', () => {
+    it('should return yogas and summary for valid birth data', async () => {
+      const response = await request(app).post('/api/yogas').send(testData).expect(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty('yogas');
+      expect(response.body.data).toHaveProperty('summary');
+      expect(Array.isArray(response.body.data.yogas)).toBe(true);
+      expect(typeof response.body.data.summary.totalYogas).toBe('number');
+      const first = response.body.data.yogas[0];
+      if (first) {
+        expect(Array.isArray(first.opportunities)).toBe(true);
+        expect(first.opportunities.length).toBeGreaterThan(0);
+        expect(Array.isArray(first.challenges)).toBe(true);
+        expect(first.challenges.length).toBeGreaterThan(0);
+      }
+    });
+  });
+
+  describe('POST /api/compatibility', () => {
+    it('should return a normalized compatibility payload', async () => {
+      const response = await request(app)
+        .post('/api/compatibility')
+        .send({ person1: testData, person2: testData })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty('totalScore');
+      expect(response.body.data).toHaveProperty('normalizedScore');
+      expect(response.body.data).toHaveProperty('level');
+      expect(response.body.data).toHaveProperty('compatible');
+      expect(Array.isArray(response.body.data.details)).toBe(true);
+      expect(typeof response.body.data.totalScore).toBe('number');
+      expect(response.body.data.totalScore).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should return 400 when person2 is missing', async () => {
+      const response = await request(app)
+        .post('/api/compatibility')
+        .send({ person1: testData })
+        .expect(400);
+
+      expect(response.body.error).toContain('Missing required fields');
+    });
+  });
+
+  describe('POST /api/ashtakoot', () => {
+    it('should return classical compatibility with nakshatra payload', async () => {
+      const response = await request(app)
+        .post('/api/ashtakoot')
+        .send({ person1: testData, person2: testData })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data).toHaveProperty('totalScore');
+      expect(response.body.data).toHaveProperty('nakshatra');
+      expect(response.body.data.nakshatra).toHaveProperty('person1');
+      expect(response.body.data.nakshatra).toHaveProperty('person2');
+      expect(response.body.data.nakshatra).toHaveProperty('yoniScore');
+      expect(response.body.data.nakshatra.person1).toHaveProperty('name');
+      expect(response.body.data.nakshatra.person2).toHaveProperty('animal');
+      expect(typeof response.body.data.nakshatra.yoniScore).toBe('number');
+    });
+
+    it('should return 400 for missing required compatibility fields', async () => {
+      const badPerson = { ...testData };
+      delete badPerson.time;
+      const response = await request(app)
+        .post('/api/ashtakoot')
+        .send({ person1: badPerson, person2: testData })
+        .expect(400);
+
+      expect(response.body.error).toContain('Missing required field');
+    });
+  });
+
   describe('POST /api/horoscope', () => {
     it('should successfully generate horoscope SVG', async () => {
       const response = await request(app)
@@ -189,10 +281,10 @@ describe('Rashi API Server', () => {
         .send(testData)
         .expect(200);
 
-      // Should return SVG content
-      expect(response.headers['content-type']).toContain('svg');
-      expect(response.text).toContain('<svg');
-      expect(response.text).toContain('Vedic Horoscope Chart');
+      const svg = responseBodyAsString(response);
+      expect(response.headers['content-type']).toMatch(/svg/);
+      expect(svg).toContain('<svg');
+      expect(svg).toMatch(/Vedic Horoscope/);
     });
 
     it('should return JSON format when Accept header is application/json', async () => {
@@ -226,8 +318,156 @@ describe('Rashi API Server', () => {
         .send({ ...testData, size: 1000 })
         .expect(200);
 
-      expect(response.text).toContain('width="1000"');
-      expect(response.text).toContain('height="1000"');
+      const svg = responseBodyAsString(response);
+      expect(svg).toContain('width="1000"');
+      expect(svg).toContain('height="1000"');
+    });
+  });
+
+  describe('POST /api/mudda-dasha', () => {
+    it('should return exactly nine Mudda segments for a birth-year after birth', async () => {
+      const response = await request(app)
+        .post('/api/mudda-dasha')
+        .send({ ...testData, year: 2002 })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      const { muddaSegments, year } = response.body.data;
+      expect(year).toBe(2002);
+      expect(Array.isArray(muddaSegments)).toBe(true);
+      expect(muddaSegments).toHaveLength(9);
+
+      for (let i = 0; i < muddaSegments.length; i++) {
+        const s = muddaSegments[i];
+        expect(s).toHaveProperty('muddaLord');
+        expect(s).toHaveProperty('start');
+        expect(s).toHaveProperty('end');
+        expect(s).toHaveProperty('days');
+        expect(s.muddaLord).toBe(s.pratyadashaLord);
+      }
+
+      for (let i = 1; i < muddaSegments.length; i++) {
+        const prevEnd = new Date(muddaSegments[i - 1].end).getTime();
+        const curStart = new Date(muddaSegments[i].start).getTime();
+        expect(curStart).toBe(prevEnd);
+      }
+    });
+
+    it('should return 400 when birth-year is before birth calendar year', async () => {
+      const response = await request(app)
+        .post('/api/mudda-dasha')
+        .send({ ...testData, year: 1970 })
+        .expect(400);
+
+      expect(response.body.error).toBeDefined();
+    });
+  });
+
+  describe('POST /api/panchang', () => {
+    it('should return malefic windows, hora, and limbs for Mumbai 2026-04-18', async () => {
+      const response = await request(app)
+        .post('/api/panchang')
+        .send({
+          lat: 19.076,
+          lng: 72.8777,
+          timezone: 5.5,
+          date: '2026-04-18',
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      const { data } = response.body;
+      expect(data.dateLocal).toBe('2026-04-18');
+      expect(data.maleficDaytimeWindows).toHaveLength(3);
+      expect(data.hora.day).toHaveLength(12);
+      expect(data.hora.night).toHaveLength(12);
+      expect(data.choghadiya.day).toHaveLength(8);
+      expect(data.limbsAtLocalNoon.nakshatra.name).toBeDefined();
+      expect(data.limbsAtLocalNoon.karana).toMatchObject({
+        name: expect.any(String),
+        serial: expect.any(Number),
+        fixed: expect.any(Boolean),
+      });
+    });
+
+    it('should reject missing date', async () => {
+      const response = await request(app)
+        .post('/api/panchang')
+        .send({ lat: 19.076, lng: 72.8777, timezone: 5.5 })
+        .expect(400);
+      expect(response.body.error).toMatch(/date/i);
+    });
+  });
+
+  describe('karanaFromElongation', () => {
+    const { karanaFromElongation } = require('./panchangService');
+
+    it('maps 0° elongation to Kimstughna', () => {
+      expect(karanaFromElongation(0)).toMatchObject({ name: 'Kimstughna', serial: 0, fixed: true });
+    });
+
+    it('maps first movable slice after Kimstughna to Bava', () => {
+      expect(karanaFromElongation(6)).toMatchObject({ name: 'Bava', serial: 1, fixed: false });
+    });
+  });
+
+  describe('POST /api/choghadiya', () => {
+    it('should reject when lat, lng, or timezone is missing', async () => {
+      const response = await request(app)
+        .post('/api/choghadiya')
+        .send({ lat: 19.076, lng: 72.8777 })
+        .expect(400);
+
+      expect(response.body.error).toMatch(/timezone/i);
+    });
+
+    it('should reject invalid time format', async () => {
+      const response = await request(app)
+        .post('/api/choghadiya')
+        .send({
+          lat: 19.076,
+          lng: 72.8777,
+          timezone: 5.5,
+          date: '2026-04-18',
+          time: 'noon',
+        })
+        .expect(400);
+
+      expect(response.body.error).toMatch(/time/i);
+    });
+
+    /**
+     * Golden: Mumbai, 18 Apr 2026 (Saturday). Swiss Ephemeris sunrise ~00:49 UTC;
+     * first daytime Choghadiya starts with Saturn (Kaal); first night with Venus (Chal) as fifth day lord.
+     * Cross-check style: https://www.drikpanchang.com/muhurat/choghadiya.html (city-specific table).
+     */
+    it('should return eight day and eight night segments with expected rulers for Mumbai 2026-04-18', async () => {
+      const response = await request(app)
+        .post('/api/choghadiya')
+        .send({
+          lat: 19.076,
+          lng: 72.8777,
+          timezone: 5.5,
+          date: '2026-04-18',
+          time: '12:00:00',
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      const { data } = response.body;
+      expect(data.location).toEqual({ lat: 19.076, lng: 72.8777, timezone: 5.5 });
+      expect(data.dateLocal).toBe('2026-04-18');
+      expect(data.weekdayIndex).toBe(6);
+      expect(data.sunrise).toMatch(/^2026-04-18T00:49:1[0-2]\.\d{3}Z$/);
+      expect(data.sunset).toMatch(/^2026-04-18T13:26:4[5-7]\.\d{3}Z$/);
+      expect(data.day).toHaveLength(8);
+      expect(data.night).toHaveLength(8);
+      expect(data.day[0].rulerPlanet).toBe('Saturn');
+      expect(data.day[0].label).toBe('Kaal');
+      expect(data.night[0].rulerPlanet).toBe('Venus');
+      expect(data.night[0].label).toBe('Chal');
+      expect(data.current.phase).toBe('day');
+      expect(data.current.rulerPlanet).toBe('Sun');
     });
   });
 

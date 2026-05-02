@@ -1,0 +1,416 @@
+{
+  "Ruchaka": {
+    "sanskritName": "रुचक",
+    "category": "Pancha Mahapurusha",
+    "nature": "benefic",
+    "shortDescription": "Strong Mars at a key angle of the chart often shows up as courage, stamina, and natural leadership.",
+    "fullDescription": "Ruchaka Yoga appears when Mars is in its own sign or exaltation and occupies a Kendra (angular house) from the Ascendant. Classically it is linked to vitality, bravery, authority, and success in competitive or physical pursuits. Strength still depends on the whole chart, dignity of Mars, and ongoing dasha periods.",
+    "opportunities": [
+      "Standing your ground and taking initiative when it matters",
+      "Physical vitality and persistence in sports, craft, or demanding work",
+      "People may look to you for decisive leadership in a crisis"
+    ],
+    "challenges": [
+      "Mars energy can run hot—watch impatience, sharp words, or pushing past your limits",
+      "Benefits often show strongest when Mars is well supported by the rest of the chart and timing (dasha)"
+    ],
+    "keywords": ["courage", "leadership", "vitality", "discipline"],
+    "lifeDomains": ["career", "health", "ambition"]
+  },
+  "Bhadra": {
+    "sanskritName": "भद्र",
+    "category": "Pancha Mahapurusha",
+    "nature": "benefic",
+    "shortDescription": "Strong Mercury at a chart angle supports clear thinking, good communication, and practical skill.",
+    "fullDescription": "Bhadra Yoga is one of the five Mahapurusha Yogas, formed when Mercury is in own or exalted sign in a Kendra. It is traditionally associated with sharp thinking, communication, learning, and business acumen. How it shows up day to day depends on Mercury’s condition and the houses it rules.",
+    "opportunities": [
+      "Learning quickly, explaining ideas well, and fixing problems with logic",
+      "Writing, teaching, coding, analysis, or business detail work",
+      "Networking and adapting when plans change"
+    ],
+    "challenges": [
+      "Overthinking or talking things through endlessly before acting",
+      "Tone and pacing matter—cleverness can feel cold if empathy is low"
+    ],
+    "keywords": ["intellect", "communication", "learning", "skill"],
+    "lifeDomains": ["career", "education", "relationships"]
+  },
+  "Hamsa": {
+    "sanskritName": "हंस",
+    "category": "Pancha Mahapurusha",
+    "nature": "benefic",
+    "shortDescription": "Strong Jupiter at a key angle often supports wisdom, ethics, and steady growth in life.",
+    "fullDescription": "Hamsa Yoga forms when Jupiter is in own sign or exaltation and placed in a Kendra from the Lagna. Classical texts connect it with guidance, teaching, generosity, and spiritual or material expansion. Real-world results vary with Jupiter’s house rulerships and transits.",
+    "opportunities": [
+      "Big-picture optimism and the ability to mentor or uplift others",
+      "Education, faith, or purpose-driven work can feel natural",
+      "Support may arrive through teachers, elders, or generous contacts"
+    ],
+    "challenges": [
+      "Assuming things will always work out without practical follow-through",
+      "Excess—overpromising, overspending, or skipping details when Jupiter is stressed"
+    ],
+    "keywords": ["wisdom", "growth", "guidance", "optimism"],
+    "lifeDomains": ["career", "spirituality", "family"]
+  },
+  "Malavya": {
+    "sanskritName": "मालव्य",
+    "category": "Pancha Mahapurusha",
+    "nature": "benefic",
+    "shortDescription": "Strong Venus at a chart angle can highlight creativity, harmony, and enjoyment of beauty and comfort.",
+    "fullDescription": "Malavya Yoga is the Venus Mahapurusha Yoga: Venus in own or exalted sign in a Kendra. It is traditionally tied to arts, relationships, comfort, and refined tastes. Expression depends on Venus’s house placement and aspects from other grahas.",
+    "opportunities": [
+      "Art, design, music, or anything that needs taste and aesthetics",
+      "Warmth in relationships and skill at creating pleasant environments",
+      "Negotiation and diplomacy when people disagree"
+    ],
+    "challenges": [
+      "Comfort-seeking or people-pleasing when you need a firm boundary",
+      "Venus themes still depend on house topics—love or money lessons can coexist with the gift"
+    ],
+    "keywords": ["creativity", "harmony", "relationships", "comfort"],
+    "lifeDomains": ["relationships", "career", "lifestyle"]
+  },
+  "Shasha": {
+    "sanskritName": "शश",
+    "category": "Pancha Mahapurusha",
+    "nature": "benefic",
+    "shortDescription": "Strong Saturn at a key angle rewards patience, structure, and long-term effort.",
+    "fullDescription": "Shasha Yoga arises when Saturn is in own sign or exaltation in a Kendra. Classical sources associate it with patience, responsibility, authority earned over time, and resilience. Saturn’s natural slowness means benefits often mature gradually.",
+    "opportunities": [
+      "Building something durable—career, reputation, or health habits over years",
+      "Earning respect through reliability rather than shortcuts",
+      "Staying calm under pressure when others panic"
+    ],
+    "challenges": [
+      "Early delays or heavy responsibilities before the payoff",
+      "Risk of cynicism or self-criticism if rest and warmth are neglected"
+    ],
+    "keywords": ["discipline", "endurance", "authority", "structure"],
+    "lifeDomains": ["career", "health", "long-term goals"]
+  },
+  "Gajakesari": {
+    "sanskritName": "गजकेसरी",
+    "category": "Lunar",
+    "nature": "benefic",
+    "shortDescription": "Jupiter in a strong geometric link to your Moon often steadies the mind and attracts helpful people.",
+    "fullDescription": "Gajakesari Yoga links the Moon (mind) with Jupiter (wisdom, expansion) in a 1–4–7–10 relationship by sign from the Moon. It is classically read as dignity, helpful alliances, and steadier judgment. Challenging aspects or dasha periods can still temper the experience.",
+    "opportunities": [
+      "Emotional steadiness and better judgment when you pause before reacting",
+      "Visibility, recognition, or support from mentors and peers",
+      "Combining intuition with a hopeful, learning mindset"
+    ],
+    "challenges": [
+      "Hard aspects or rough periods can still stir moods—this is not immunity to stress",
+      "Avoid leaning only on luck; pair optimism with concrete plans"
+    ],
+    "keywords": ["recognition", "support", "judgment", "optimism"],
+    "lifeDomains": ["career", "emotional life", "reputation"]
+  },
+  "Chandra-Mangal": {
+    "sanskritName": "चन्द्रमंगल",
+    "category": "Lunar",
+    "nature": "benefic",
+    "shortDescription": "Moon and Mars in the same sign blend feeling with drive—passion, initiative, and quick reactions.",
+    "fullDescription": "When Moon and Mars occupy the same sign, impulses, courage, and emotional reactivity can be heightened. Classical texts sometimes link this to wealth-generating combinations (Dhana yoga variants) when other factors align. Channeling this consciously supports productivity without burnout.",
+    "opportunities": [
+      "High energy for projects that need heart and hustle together",
+      "Courage to start things that felt scary when you were playing it safe",
+      "Magnetism and passion in relationships or creative work"
+    ],
+    "challenges": [
+      "Short fuse or tiredness if you do not discharge stress physically",
+      "Impulse buys or snap decisions when feelings spike"
+    ],
+    "keywords": ["drive", "passion", "initiative", "emotion"],
+    "lifeDomains": ["health", "relationships", "work"]
+  },
+  "Sunafa": {
+    "sanskritName": "सुनफ",
+    "category": "Lunar",
+    "nature": "benefic",
+    "shortDescription": "A planet just ahead of your Moon by sign often supports resources, voice, and feeling grounded.",
+    "fullDescription": "Sunafa Yoga indicates grahas (other than Sun, Rahu, Ketu) occupying the second house from the Moon. Traditionally this can help with accumulation, speech, and family support. The specific planet modifies the theme—for example Jupiter may differ from Saturn.",
+    "opportunities": [
+      "Building savings, skills, or a sense of self-worth step by step",
+      "Speech and storytelling that help you earn trust or income",
+      "Family or close allies acting as a practical buffer"
+    ],
+    "challenges": [
+      "The flavor depends on which planet sits there—Saturn may teach through restraint",
+      "Watch for attachment to security that blocks healthy risk"
+    ],
+    "keywords": ["resources", "speech", "stability"],
+    "lifeDomains": ["wealth", "family", "communication"]
+  },
+  "Anafa": {
+    "sanskritName": "अनफ",
+    "category": "Lunar",
+    "nature": "benefic",
+    "shortDescription": "A planet just behind your Moon by sign can support rest, reflection, and quiet growth.",
+    "fullDescription": "Anafa Yoga is formed when qualifying planets sit in the twelfth house from the Moon. Classical interpretations include solitude, foreign connections, or spiritual retreat as constructive themes when the chart is balanced.",
+    "opportunities": [
+      "Sleep, therapy, retreat, or creative solitude that actually restores you",
+      "Behind-the-scenes roles or research that later become valuable",
+      "Letting go of what no longer fits so new space opens up"
+    ],
+    "challenges": [
+      "Too much isolation if you forget to reconnect with people",
+      "The twelfth-house flavor can blur boundaries—clarity and routines help"
+    ],
+    "keywords": ["reflection", "release", "subtle gains"],
+    "lifeDomains": ["spirituality", "travel", "recovery"]
+  },
+  "Durudhara": {
+    "sanskritName": "दुरुधर",
+    "category": "Lunar",
+    "nature": "benefic",
+    "shortDescription": "Planets on both sides of your Moon often act like bumpers—less emotional whiplash, more support.",
+    "fullDescription": "Durudhara combines Sunafa and Anafa: grahas flank the Moon. This is traditionally read as fewer feelings of isolation and more practical or social support around the mind and moods. Many charts with strong flanking planets show resilient coping styles.",
+    "opportunities": [
+      "Balanced support: one side helps you push forward, the other helps you rest",
+      "Resilience in moods—you bounce back faster after stress",
+      "People or habits that both motivate and soothe you"
+    ],
+    "challenges": [
+      "If flanking planets clash by nature, you can feel pulled in two directions",
+      "Still need honest self-care—support does not erase all overload"
+    ],
+    "keywords": ["support", "balance", "resilience"],
+    "lifeDomains": ["emotional life", "relationships"]
+  },
+  "Kemadruma": {
+    "sanskritName": "केमद्रुम",
+    "category": "Lunar",
+    "nature": "challenging",
+    "shortDescription": "With no qualifying planets beside the Moon by sign, feelings can feel more exposed or self-reliant.",
+    "fullDescription": "Kemadruma Yoga is classically described when the Moon lacks neighboring grahas (excluding Sun, Rahu, Ketu) in the 2nd and 12th from itself. Many astrologers also look for cancellations (e.g., Moon in Kendra from Lagna). In practice, people with this pattern often build strong inner life skills; remedies and supportive transits are traditionally used to soften isolation themes.",
+    "opportunities": [
+      "Deep self-knowledge and independence—you learn to regulate your own moods",
+      "Strong intuition when you trust it and journal or talk it through",
+      "Classical texts list cancellations; a full reading may show offsets"
+    ],
+    "challenges": [
+      "Loneliness spikes or feeling misunderstood when stress hits",
+      "Sensitivity to environment and sleep—routine and gentle people matter more"
+    ],
+    "keywords": ["independence", "sensitivity", "inner work"],
+    "lifeDomains": ["emotional life", "mental health"]
+  },
+  "Sakata": {
+    "sanskritName": "शकट",
+    "category": "Lunar",
+    "nature": "challenging",
+    "shortDescription": "The Moon in a tense relationship to Jupiter by house can coincide with ups and downs before things settle.",
+    "fullDescription": "Sakata Yoga links the Moon’s fluctuating nature with Jupiter’s wisdom house when the Moon falls in a challenging house from Jupiter. Classical texts mention ups and downs in prosperity or reputation. Many successful people have difficult lunar patterns; context from the full chart and dasha matters more than any single label.",
+    "opportunities": [
+      "Learning adaptability—you get good at resetting after a setback",
+      "Humility and perspective when fortune shifts teach what really matters",
+      "Long-term growth can still be strong when other chart factors support it"
+    ],
+    "challenges": [
+      "Cyclic changes in money, mood, or public image that test patience",
+      "Avoid gambling on reputation swings—steady habits beat drama"
+    ],
+    "keywords": ["change", "resilience", "cycles"],
+    "lifeDomains": ["career", "mood", "fortune"]
+  },
+  "Budhaditya": {
+    "sanskritName": "बुधादित्य",
+    "category": "Solar",
+    "nature": "benefic",
+    "shortDescription": "Sun and Mercury together highlight a sharp mind, learning, and how you put your identity into words.",
+    "fullDescription": "Budhaditya Yoga is very common: Sun and Mercury share a sign (Mercury is often combust). Strength is higher when Mercury has dignity or supportive aspects. It is associated with articulate self-expression, analytical ego, and interest in knowledge.",
+    "opportunities": [
+      "Clear writing, speaking, teaching, or debating your ideas",
+      "Curiosity that keeps you upgrading skills through life",
+      "Confidence in learning new tools or subjects quickly"
+    ],
+    "challenges": [
+      "Mercury near the Sun can feel mentally intense—burnout if you never unplug",
+      "Pride in being right can strain relationships without active listening"
+    ],
+    "keywords": ["intellect", "identity", "expression"],
+    "lifeDomains": ["career", "education", "communication"]
+  },
+  "Veshi": {
+    "sanskritName": "वेशी",
+    "category": "Solar",
+    "nature": "benefic",
+    "shortDescription": "A planet just ahead of your Sun by sign can support forward motion, visibility, and initiative.",
+    "fullDescription": "Veshi Yoga forms when a graha (excluding Moon, Rahu, Ketu) occupies the second sign from the Sun. It is read as progressive, outward-looking energy and can relate to reputation building.",
+    "opportunities": [
+      "Momentum on goals that need public steps or leadership",
+      "People notice your effort when you show up consistently",
+      "Good stretch window for pitching, launching, or claiming credit fairly"
+    ],
+    "challenges": [
+      "Which planet leads colors the story—Saturn may ask for slow, careful advance",
+      "Visibility also means accountability—what you say sticks"
+    ],
+    "keywords": ["momentum", "visibility", "initiative"],
+    "lifeDomains": ["career", "leadership"]
+  },
+  "Voshi": {
+    "sanskritName": "वोशी",
+    "category": "Solar",
+    "nature": "benefic",
+    "shortDescription": "A planet just behind your Sun by sign can support planning, recovery, and strategic downtime.",
+    "fullDescription": "Voshi Yoga places a qualifying planet in the twelfth sign from the Sun. Themes can include research, healing, or working behind the scenes before stepping forward.",
+    "opportunities": [
+      "Preparation and research before a big reveal or career move",
+      "Healing, therapy, or spiritual practice that rebuilds confidence",
+      "Strategic privacy—protecting energy until the timing is right"
+    ],
+    "challenges": [
+      "Risk of hiding too long or undervaluing your contribution",
+      "Twelfth-house themes need boundaries so sacrifice does not become default"
+    ],
+    "keywords": ["strategy", "preparation", "insight"],
+    "lifeDomains": ["work", "spirituality"]
+  },
+  "Ubhayachari": {
+    "sanskritName": "उभयचारी",
+    "category": "Solar",
+    "nature": "benefic",
+    "shortDescription": "Planets on both sides of your Sun balance outward drive with inner support.",
+    "fullDescription": "Ubhayachari combines Veshi and Voshi: grahas flank the Sun by sign. This is traditionally considered stabilizing for confidence and consistent effort.",
+    "opportunities": [
+      "Less boom-bust in confidence—you have both push and recovery built in",
+      "Steady reputation: people see you as reliable, not only flashy",
+      "Easier to alternate between public work and private recharge"
+    ],
+    "challenges": [
+      "If the flanking planets disagree in style, you may feel torn between speed and caution",
+      "You still have to choose priorities—support does not remove tradeoffs"
+    ],
+    "keywords": ["balance", "support", "consistency"],
+    "lifeDomains": ["career", "identity"]
+  },
+  "Raja Yoga": {
+    "sanskritName": "राज योग",
+    "category": "Raja",
+    "nature": "benefic",
+    "shortDescription": "When an angular house lord and a trinal house lord connect strongly, leadership and meaningful success get a boost.",
+    "fullDescription": "Raja Yoga forms when the ruler of an angular house (1, 4, 7, 10) and the ruler of a trinal house (1, 5, 9) connect by conjunction or mutual aspect. This is a cornerstone combination for authority and purposeful achievement in Parashari analysis. The houses involved tell you *where* in life the yoga tends to express.",
+    "opportunities": [
+      "Recognition, responsibility, and impact in the life areas shown by the houses involved",
+      "Integrating talent (trines) with real-world stage (angles)—ideas become outcomes",
+      "Support from timing when dasha activates those lords"
+    ],
+    "challenges": [
+      "Pressure and visibility go together—success can mean less privacy",
+      "If lords are weak or afflicted, the path may ask extra skill and patience"
+    ],
+    "keywords": ["leadership", "status", "integration"],
+    "lifeDomains": ["career", "public life", "purpose"]
+  },
+  "Kala Sarpa": {
+    "sanskritName": "कालसर्प",
+    "category": "Special",
+    "nature": "challenging",
+    "shortDescription": "All classical planets on one side of the Rahu–Ketu axis is a striking pattern—often intense, focused, and workable.",
+    "fullDescription": "Kala Sarpa (or similar cluster patterns) appears when all seven grahas fall on one half of the zodiac between Rahu and Ketu by sign. Traditions differ on emphasis; many modern astrologers note strong karmic focus, delays, or breakthroughs after effort. It does not determine destiny by itself—dashas, transits, and individual choice matter greatly.",
+    "opportunities": [
+      "Deep focus on one chapter of life until you master it",
+      "Breakthroughs after sustained effort rather than overnight luck",
+      "A memorable life story—many public figures have strong nodal emphasis"
+    ],
+    "challenges": [
+      "Delays, reversals, or feeling “all eggs in one basket” until balance is learned",
+      "Intensity needs healthy outlets—avoid fatalism; context from the full chart matters"
+    ],
+    "keywords": ["intensity", "karma", "focus", "breakthrough"],
+    "lifeDomains": ["life direction", "challenges", "growth"]
+  },
+  "Neechabhanga Raja Yoga": {
+    "sanskritName": "नीचभंग राज योग",
+    "category": "Special",
+    "nature": "benefic",
+    "shortDescription": "When a planet is debilitated but “saved” by classical cancellation rules, strength can arrive after struggle.",
+    "fullDescription": "Neechabhanga Raja Yoga occurs when a planet occupies its debilitation sign but cancellation conditions apply—such as the debilitation lord or exaltation lord in a Kendra from Lagna or Moon, or aspect from the debilitation lord. The idea is that apparent weakness transforms into earned capability. Timing often improves once supportive dashas activate.",
+    "opportunities": [
+      "Resilience and empathy from lived experience others skipped",
+      "Late bloomers often outperform flash-in-the-pan talent over time",
+      "The same topic that humbled you can become your expertise"
+    ],
+    "challenges": [
+      "Early chapter may feel unfair or underpowered before cancellation fully kicks in",
+      "Needs patience and honest work—this is earned dignity, not a free pass"
+    ],
+    "keywords": ["resilience", "recovery", "redemption"],
+    "lifeDomains": ["career", "character", "timing"]
+  },
+  "Vipareeta Raja Yoga": {
+    "sanskritName": "विपरीत राज योग",
+    "category": "Special",
+    "nature": "mixed",
+    "shortDescription": "Lords of difficult houses placed in other difficult houses can turn crisis skill into unconventional wins.",
+    "fullDescription": "Vipareeta Raja Yoga involves the lords of the 6th, 8th, or 12th houses occupying *another* dusthana. Classical texts describe paradoxical success through crisis, litigation, research, or transformation. It is rarely “easy” comfort—more often mastery through difficulty.",
+    "opportunities": [
+      "Thriving in repair work: fixing messes, systems, health, or investigations",
+      "Turning a loss into leverage—reorgs, pivots, comebacks",
+      "Deep expertise in taboo or high-stakes topics others avoid"
+    ],
+    "challenges": [
+      "Comfort through chaos is rare—expect real tests before upside",
+      "Burnout risk if you only live in emergency mode; build recovery on purpose"
+    ],
+    "keywords": ["turnaround", "crisis skill", "transformation"],
+    "lifeDomains": ["work", "health", "shared resources"]
+  },
+  "Saraswati Yoga": {
+    "sanskritName": "सरस्वती योग",
+    "category": "Special",
+    "nature": "benefic",
+    "shortDescription": "Jupiter, Venus, and Mercury each in supportive houses lifts learning, arts, and refined intelligence.",
+    "fullDescription": "Saraswati Yoga requires Jupiter, Venus, and Mercury each to occupy a Kendra, Trikona, or the 2nd house from the Ascendant. It is traditionally associated with education, creativity, and articulate wisdom. Rare in strict form; when present, it often marks a love of mastery.",
+    "opportunities": [
+      "Blending head and heart in teaching, arts, or scholarship",
+      "Voice, writing, or performance that feels both smart and beautiful",
+      "Long arc mastery—people may seek you as a reference in your field"
+    ],
+    "challenges": [
+      "Strict classical form is uncommon—perfectionism about “having” the yoga misses the point",
+      "Balance output with rest; three mental planets can overfill the schedule"
+    ],
+    "keywords": ["learning", "creativity", "mastery"],
+    "lifeDomains": ["education", "arts", "communication"]
+  },
+  "Dhana Yoga": {
+    "sanskritName": "धन योग",
+    "category": "Dhana",
+    "nature": "benefic",
+    "shortDescription": "Lords of wealth-related houses in a strong link support earning, growth, and resource flow when the chart agrees.",
+    "fullDescription": "Dhana Yoga forms when lords of the 2nd, 5th, 9th, and/or 11th houses connect by conjunction, mutual aspect, or sign exchange (parivartana). These houses relate to income, investments, fortune, and gains. Real wealth outcomes still depend on dasha, effort, and transits.",
+    "opportunities": [
+      "Multiple paths to income: job, side projects, investments, or patronage",
+      "Luck and learning combine when 5th/9th lords participate",
+      "Partnerships that grow the pie when 11th-house themes activate"
+    ],
+    "challenges": [
+      "Combinations are not a guarantee—risk management and ethics still decide outcomes",
+      "Easy come phases need discipline so easy-go phases do not wipe you out"
+    ],
+    "keywords": ["wealth", "opportunity", "resources"],
+    "lifeDomains": ["finance", "career", "investment"]
+  },
+  "Lakshmi Yoga": {
+    "sanskritName": "लक्ष्मी योग",
+    "category": "Dhana",
+    "nature": "benefic",
+    "shortDescription": "Your rising-sign lord linking to 2nd or 11th lords supports self-made prosperity and aligned gains.",
+    "fullDescription": "Lakshmi-type combinations connect the Ascendant lord with lords of the 2nd (resources) or 11th (gains). When these planets are conjunct, in mutual aspect, or in parivartana, classical authors often expect supportive financial karma. Ethical use of resources strengthens the yoga in practice.",
+    "opportunities": [
+      "Income tied to your authentic path—not only chasing trends",
+      "Growing self-worth alongside bank balance when you invest in skills",
+      "Community or network gains (11th) that feel values-aligned"
+    ],
+    "challenges": [
+      "Identity and money get linked—set boundaries so net worth does not define worth",
+      "Still depends on dasha and effort; avoid entitlement or risky leverage"
+    ],
+    "keywords": ["prosperity", "values", "self-direction"],
+    "lifeDomains": ["wealth", "career", "self-worth"]
+  }
+}

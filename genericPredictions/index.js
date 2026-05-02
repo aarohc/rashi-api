@@ -32,16 +32,36 @@ function readJsonIfExists(filePath) {
 
 module.exports = async function (context, req) {
   try {
+    const { ensureRashiOverridesFresh, getGenericFileOverride, getYogaDescriptionsOverride } = require('../rashiContentOverrides');
+    await ensureRashiOverridesFresh();
     const baseDataDir = getBaseDataDir();
     const locale = (req && req.query && req.query.locale) ? String(req.query.locale).toLowerCase() : 'en';
     const dataDir = getDataDirForLocale(baseDataDir, locale);
     const enDir = locale === 'en' ? dataDir : getDataDirForLocale(baseDataDir, 'en');
-    const files = ['planet.json', 'house.json', 'dasha-generic.json', 'dasha-maha.json', 'pratyadasha-generic.json'];
-    const keys = ['planetInHouse', 'houseByRashi', 'dashaGeneric', 'dashaMaha', 'pratyadashaGeneric'];
+    const files = [
+      'planet.json',
+      'house.json',
+      'dasha-generic.json',
+      'dasha-maha.json',
+      'pratyadasha-generic.json',
+      'shani-moon-transit-phases.json'
+    ];
+    const keys = [
+      'planetInHouse',
+      'houseByRashi',
+      'dashaGeneric',
+      'dashaMaha',
+      'pratyadashaGeneric',
+      'shaniMoonPhases'
+    ];
     const out = {};
     for (let i = 0; i < files.length; i++) {
-      let data = readJsonIfExists(path.join(dataDir, files[i]));
-      if (data == null && dataDir !== enDir) data = readJsonIfExists(path.join(enDir, files[i]));
+      const stem = files[i].replace(/\.json$/i, '');
+      let data = getGenericFileOverride(stem, locale);
+      if (!data) {
+        data = readJsonIfExists(path.join(dataDir, files[i]));
+        if (data == null && dataDir !== enDir) data = readJsonIfExists(path.join(enDir, files[i]));
+      }
       if (data == null) {
         context.res = {
           status: 500,
@@ -52,6 +72,9 @@ module.exports = async function (context, req) {
       }
       out[keys[i]] = data;
     }
+    const yogaDescPath = path.join(baseDataDir, 'yoga-descriptions.json');
+    const yogaDescriptions = getYogaDescriptionsOverride() || readJsonIfExists(yogaDescPath) || {};
+    out.yogaDescriptions = yogaDescriptions;
     context.res = {
       status: 200,
       body: out,

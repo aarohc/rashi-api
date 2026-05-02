@@ -2,15 +2,20 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
-const vedicAstrology = require('vedic-astrology');
-const swisseph = require('swisseph-v2');
 const { generateHoroscopeSVG } = require('./horoscopeGenerator');
-const { generateVimshottariDasha, getPratyadashaForYear } = require('./vimshottariService');
-const { computeCompatibility } = require('./compatibilityService');
+const { generateVimshottariDasha, getPratyadashaForYear, getMuddaDashaForYear } = require('./vimshottariService');
+const { computeFamilyDashaWindow } = require('./familyDashaService');
+const { computeShaniMoonTransit, currentPhaseAt } = require('./shaniMoonTransitService');
+const { computeCompatibility, computeClassicalCompatibility } = require('./compatibilityService');
 const { calculatePlanetAspects } = require('./aspectsService');
+const { computeFullRashiData } = require('./chartComputer');
+const { evaluateAllYogas } = require('./yogaService');
+const { computeChoghadiya } = require('./choghadiyaService');
+const { computePanchangDay } = require('./panchangService');
 const { normalizeDateToYmd } = require('./utils');
 const path = require('path');
 const fs = require('fs');
+const { loadRashiRuntimeConfig, getRashiTunable } = require('./rashiRuntimeConfig');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -62,12 +67,32 @@ const swaggerOptions = {
         description: 'Vimshottari (Maha/Antar) dasha calculations'
       },
       {
+        name: 'MuddaDasha',
+        description: 'Mudda Dasha (Varshphala annual) proportional lords for a birth-year'
+      },
+      {
         name: 'Compatibility',
         description: 'Relationship compatibility calculations'
       },
       {
         name: 'Aspects',
         description: 'Vedic planetary aspect (drishti) calculations'
+      },
+      {
+        name: 'Yogas',
+        description: 'Classical Vedic yoga (planetary combination) detection'
+      },
+      {
+        name: 'Choghadiya',
+        description: 'Choghadiya muhurat windows from sunrise/sunset at a location (8 day + 8 night segments)'
+      },
+      {
+        name: 'Panchang',
+        description: 'Daily Panchang bundle (Choghadiya, Rahu Kaal, Yamaganda, Gulika, Hora, Abhijit, limbs at noon)'
+      },
+      {
+        name: 'ShaniMoonTransit',
+        description: 'Sade Sati and Dhaiya (Saturn transit vs natal Moon)'
       }
     ]
   },
@@ -249,158 +274,8 @@ app.post('/api/rashi', (req, res) => {
   }
 
   try {
-    // Normalize date format to yyyy-mm-dd (vedic-astrology expects this format)
     const normalizedDate = normalizeDateToYmd(date);
-
-    // Compute birth chart using vedic-astrology
-    const birthChart = vedicAstrology.positioner.getBirthChart(normalizedDate, time, lat, lng, timezone);
-
-    // Map Rashi codes to sign numbers (1-12)
-    const rashiToNumber = {
-      'Ar': 1,  // Aries
-      'Ta': 2,  // Taurus
-      'Ge': 3,  // Gemini
-      'Cn': 4,  // Cancer
-      'Le': 5,  // Leo
-      'Vi': 6,  // Virgo
-      'Li': 7,  // Libra
-      'Sc': 8,  // Scorpio
-      'Sg': 9,  // Sagittarius
-      'Cp': 10, // Capricorn
-      'Aq': 11, // Aquarius
-      'Pi': 12  // Pisces
-    };
-
-    // Helper function to calculate house number from planet longitude and Lagna (1-12)
-    const calculateHouseNumber = (planetLongitude, lagnaLongitude) => {
-      let diff = planetLongitude - lagnaLongitude;
-      if (diff < 0) diff += 360;
-      const houseNumber = Math.floor(diff / 30) + 1;
-      return houseNumber > 12 ? houseNumber - 12 : houseNumber;
-    };
-
-    const lagnaLongitude = birthChart.meta.La.longitude;
-
-    // Helper function to calculate outer planets (Uranus, Neptune, Pluto) using swisseph
-    // These are not provided by vedic-astrology library; returns longitude for house calculation
-    const calculateOuterPlanet = (planetNum, normalizedDate, time, timezone) => {
-      try {
-        // Parse date and time
-        const [year, month, day] = normalizedDate.split('-').map(Number);
-        const [hours, minutes, seconds] = time.split(':').map(Number);
-        
-        // Convert to UTC (subtract timezone)
-        let utcHours = hours - timezone;
-        let utcDay = day;
-        if (utcHours < 0) {
-          utcHours += 24;
-          utcDay--;
-        } else if (utcHours >= 24) {
-          utcHours -= 24;
-          utcDay++;
-        }
-        
-        // Calculate Julian Day
-        const jd = swisseph.swe_julday(year, month, utcDay, utcHours + minutes/60 + seconds/3600, 1);
-        
-        // Set sidereal mode to Lahiri (same as vedic-astrology)
-        swisseph.swe_set_sid_mode(1); // 1 = SE_SIDM_LAHIRI
-        const ayanamsha = swisseph.swe_get_ayanamsa_ut(jd);
-        
-        // Calculate planet position
-        const result = swisseph.swe_calc_ut(jd, planetNum, 0);
-        const tropicalLong = result.longitude;
-        const siderealLong = tropicalLong - ayanamsha;
-        const normalizedLong = siderealLong < 0 ? siderealLong + 360 : siderealLong;
-        const sign = Math.floor(normalizedLong / 30) + 1;
-        const isRetro = result.longitudeSpeed < 0;
-        
-        return {
-          current_sign: sign,
-          isRetro: String(isRetro),
-          longitude: normalizedLong
-        };
-      } catch (error) {
-        console.error(`Error calculating outer planet ${planetNum}:`, error);
-        return {
-          current_sign: 0,
-          isRetro: "false",
-          longitude: 0
-        };
-      }
-    };
-
-    const uranusData = calculateOuterPlanet(7, normalizedDate, time, timezone);
-    const neptuneData = calculateOuterPlanet(8, normalizedDate, time, timezone);
-    const plutoData = calculateOuterPlanet(9, normalizedDate, time, timezone);
-
-    // Transform data to match rashi.json format (with house_number for generic predictions)
-    const rashiData = {
-      Ascendant: {
-        current_sign: rashiToNumber[birthChart.meta.La.rashi] || 0,
-        isRetro: String(birthChart.meta.La.isRetrograde || false)
-      },
-      Sun: {
-        current_sign: rashiToNumber[birthChart.meta.Su.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Su.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Su.isRetrograde || false)
-      },
-      Moon: {
-        current_sign: rashiToNumber[birthChart.meta.Mo.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Mo.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Mo.isRetrograde || false)
-      },
-      Mars: {
-        current_sign: rashiToNumber[birthChart.meta.Ma.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ma.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ma.isRetrograde || false)
-      },
-      Mercury: {
-        current_sign: rashiToNumber[birthChart.meta.Me.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Me.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Me.isRetrograde || false)
-      },
-      Jupiter: {
-        current_sign: rashiToNumber[birthChart.meta.Ju.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ju.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ju.isRetrograde || false)
-      },
-      Venus: {
-        current_sign: rashiToNumber[birthChart.meta.Ve.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ve.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ve.isRetrograde || false)
-      },
-      Saturn: {
-        current_sign: rashiToNumber[birthChart.meta.Sa.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Sa.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Sa.isRetrograde || false)
-      },
-      Rahu: {
-        current_sign: rashiToNumber[birthChart.meta.Ra.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ra.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ra.isRetrograde || false)
-      },
-      Ketu: {
-        current_sign: rashiToNumber[birthChart.meta.Ke.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ke.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ke.isRetrograde || false)
-      },
-      Uranus: {
-        current_sign: uranusData.current_sign,
-        house_number: calculateHouseNumber(uranusData.longitude, lagnaLongitude),
-        isRetro: uranusData.isRetro
-      },
-      Neptune: {
-        current_sign: neptuneData.current_sign,
-        house_number: calculateHouseNumber(neptuneData.longitude, lagnaLongitude),
-        isRetro: neptuneData.isRetro
-      },
-      Pluto: {
-        current_sign: plutoData.current_sign,
-        house_number: calculateHouseNumber(plutoData.longitude, lagnaLongitude),
-        isRetro: plutoData.isRetro
-      }
-    };
+    const { rashiData } = computeFullRashiData(normalizedDate, time, lat, lng, timezone);
 
     res.json({
       success: true,
@@ -410,6 +285,221 @@ app.post('/api/rashi', (req, res) => {
   } catch (error) {
     console.error('Error computing Rashi:', error);
     res.status(500).json({ error: 'Failed to compute Rashi data' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/yogas:
+ *   post:
+ *     summary: Detect classical Vedic yogas for a birth chart
+ *     description: Computes rashi positions then evaluates Pancha Mahapurusha, lunar, solar, Raja, special, and Dhana yogas (whole-sign houses, Lahiri sidereal).
+ *     tags: [Yogas]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - date
+ *               - time
+ *               - lat
+ *               - lng
+ *               - timezone
+ *             properties:
+ *               date:
+ *                 type: string
+ *               time:
+ *                 type: string
+ *               lat:
+ *                 type: number
+ *               lng:
+ *                 type: number
+ *               timezone:
+ *                 type: number
+ *     responses:
+ *       200:
+ *         description: Applicable yogas and summary counts
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+app.post('/api/yogas', (req, res) => {
+  const { date, time, lat, lng, timezone } = req.body;
+
+  if (!date || !time || lat === undefined || lng === undefined || timezone === undefined) {
+    return res.status(400).json({
+      error: 'Missing required fields: date (YYYY-MM-DD or DD-MM-YYYY), time (HH:MM:SS), lat, lng, timezone'
+    });
+  }
+
+  try {
+    const normalizedDate = normalizeDateToYmd(date);
+    const { rashiData } = computeFullRashiData(normalizedDate, time, lat, lng, timezone);
+    const result = evaluateAllYogas(rashiData);
+
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error computing yogas:', error);
+    res.status(500).json({ error: 'Failed to compute yogas' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/choghadiya:
+ *   post:
+ *     summary: Choghadiya for a location (day and night eight-fold divisions)
+ *     description: |
+ *       Computes sunrise and sunset with Swiss Ephemeris, then splits daytime (sunrise→sunset)
+ *       and night (sunset→next sunrise) into eight equal Choghadiya periods.
+ *       Day sequence starts with the weekday lord; night starts with the ruler of the fifth daytime period.
+ *       Optional date/time default to “now” in the given timezone offset. Time is only used to pick the current segment.
+ *     tags: [Choghadiya]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - lat
+ *               - lng
+ *               - timezone
+ *             properties:
+ *               lat:
+ *                 type: number
+ *                 description: Latitude (decimal degrees)
+ *               lng:
+ *                 type: number
+ *                 description: Longitude (decimal degrees)
+ *               timezone:
+ *                 type: number
+ *                 description: Hours east of UTC (e.g. 5.5 for IST, -5 for EST)
+ *               date:
+ *                 type: string
+ *                 description: Local civil date YYYY-MM-DD or DD-MM-YYYY (default today in zone)
+ *               time:
+ *                 type: string
+ *                 description: Local time HH:MM:SS (default now in zone)
+ *     responses:
+ *       200:
+ *         description: Day and night tables and optional current segment
+ *       400:
+ *         description: Bad request
+ *       422:
+ *         description: Rise/set not computable (e.g. extreme latitude)
+ *       500:
+ *         description: Server error
+ */
+app.post('/api/choghadiya', (req, res) => {
+  const { lat, lng, timezone, date, time } = req.body;
+
+  if (lat === undefined || lng === undefined || timezone === undefined) {
+    return res.status(400).json({
+      error: 'Missing required fields: lat, lng, timezone (hours east of UTC). Optional date, time (HH:MM:SS).',
+    });
+  }
+
+  try {
+    const raw = computeChoghadiya({ lat, lng, timezone, date, time });
+    res.json({
+      success: true,
+      data: {
+        location: { lat, lng, timezone },
+        dateLocal: raw.dateLocal,
+        weekdayIndex: raw.weekdayIndex,
+        sunrise: raw.sunriseUtc,
+        sunset: raw.sunsetUtc,
+        nextSunrise: raw.nextSunriseUtc,
+        day: raw.day,
+        night: raw.night,
+        current: raw.current,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error computing Choghadiya:', error);
+    if (error.code === 'NO_RISE_SET' || error.code === 'EPHEMERIS') {
+      return res.status(422).json({ error: error.message || 'Could not compute sunrise or sunset for this location' });
+    }
+    if (error.message && /Invalid|format/i.test(error.message)) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to compute Choghadiya' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/panchang:
+ *   post:
+ *     summary: Daily Panchang bundle for a location and civil date
+ *     description: |
+ *       Choghadiya (day+night), Rahu Kaal / Yamaganda / Gulika (8 daytime eighths), 12+12 Hora,
+ *       Abhijit (omitted Wednesday), Tithi/Nakshatra/Yoga at local noon (vedic-astrology).
+ *     tags: [Panchang]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - lat
+ *               - lng
+ *               - timezone
+ *               - date
+ *             properties:
+ *               lat: { type: number }
+ *               lng: { type: number }
+ *               timezone: { type: number }
+ *               date: { type: string, description: YYYY-MM-DD or DD-MM-YYYY }
+ *     responses:
+ *       200:
+ *         description: Panchang bundle
+ *       400:
+ *         description: Bad request
+ *       422:
+ *         description: Rise/set not computable
+ *       500:
+ *         description: Server error
+ */
+app.post('/api/panchang', (req, res) => {
+  const { lat, lng, timezone, date } = req.body;
+
+  if (lat === undefined || lng === undefined || timezone === undefined || !date) {
+    return res.status(400).json({
+      error: 'Missing required fields: lat, lng, timezone, date (YYYY-MM-DD or DD-MM-YYYY)',
+    });
+  }
+
+  try {
+    const normalizedDate = normalizeDateToYmd(date);
+    const raw = computePanchangDay({ lat, lng, timezone, date: normalizedDate });
+    res.json({
+      success: true,
+      data: {
+        location: { lat, lng, timezone },
+        ...raw,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('Error computing Panchang:', error);
+    if (error.code === 'NO_RISE_SET' || error.code === 'EPHEMERIS') {
+      return res.status(422).json({ error: error.message || 'Could not compute sunrise or sunset for this location' });
+    }
+    if (error.message && /Invalid|format|required/i.test(error.message)) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to compute Panchang' });
   }
 });
 
@@ -705,6 +795,77 @@ app.post('/api/pratyadasha', (req, res) => {
 
 /**
  * @swagger
+ * /api/mudda-dasha:
+ *   post:
+ *     summary: Mudda Dasha segments for a birth-year (Varshphala / Tajik)
+ *     description: Returns exactly nine proportional Mudda periods from birthday in `year` to next birthday. Lords follow Vimshottari order starting from (Moon birth-nakshatra lord index + completed varshas) mod 9. Durations scale (lord years / 120) × window length.
+ *     tags: [MuddaDasha]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [date, time, lat, lng, timezone, year]
+ *     responses:
+ *       200:
+ *         description: Mudda segments for the birth-year
+ *       400:
+ *         description: Bad request
+ *       500:
+ *         description: Server error
+ */
+app.post('/api/mudda-dasha', (req, res) => {
+  const { date, time, lat, lng, timezone, year } = req.body;
+
+  if (!date || !time || lat === undefined || lng === undefined || timezone === undefined || year === undefined) {
+    return res.status(400).json({
+      error: 'Missing required fields: date (YYYY-MM-DD or DD-MM-YYYY), time (HH:MM:SS), lat, lng, timezone, year'
+    });
+  }
+
+  const yearNum = typeof year === 'string' ? parseInt(year, 10) : year;
+  if (Number.isNaN(yearNum) || yearNum < 1900 || yearNum > 2100) {
+    return res.status(400).json({
+      error: 'Invalid year: must be an integer between 1900 and 2100'
+    });
+  }
+
+  try {
+    let normalizedDate = date;
+    const ddmmyyyyPattern = /^(\d{2})-(\d{2})-(\d{4})$/;
+    const match = date.match(ddmmyyyyPattern);
+    if (match) {
+      const [, day, month, yearPart] = match;
+      normalizedDate = `${yearPart}-${month}-${day}`;
+    }
+
+    const muddaData = getMuddaDashaForYear(
+      normalizedDate,
+      time,
+      lat,
+      lng,
+      timezone,
+      yearNum
+    );
+
+    res.json({
+      success: true,
+      data: muddaData,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error computing mudda-dasha:', error);
+    const msg = error && error.message ? String(error.message) : 'Failed to compute mudda-dasha';
+    if (msg.includes('before birth') || msg.includes('Invalid')) {
+      return res.status(400).json({ error: msg });
+    }
+    res.status(500).json({ error: 'Failed to compute mudda-dasha', detail: msg });
+  }
+});
+
+/**
+ * @swagger
  * /api/compatibility:
  *   post:
  *     summary: Calculate relationship compatibility score between two birth charts
@@ -849,6 +1010,72 @@ app.post('/api/compatibility', (req, res) => {
 
 /**
  * @swagger
+ * /api/ashtakoot:
+ *   post:
+ *     summary: Classical compatibility payload for two birth charts
+ *     description: Returns normalized classical compatibility score with current breakdown details and nakshatra/yoni signal. This endpoint is designed as the stable classical contract for life-partner compatibility.
+ *     tags: [Compatibility]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - person1
+ *               - person2
+ *             properties:
+ *               person1:
+ *                 type: object
+ *               person2:
+ *                 type: object
+ *               threshold:
+ *                 type: number
+ *                 example: 0.4
+ *     responses:
+ *       200:
+ *         description: Classical compatibility computed successfully
+ *       400:
+ *         description: Missing fields
+ *       500:
+ *         description: Internal server error
+ */
+app.post('/api/ashtakoot', (req, res) => {
+  const { person1, person2, threshold } = req.body || {};
+
+  if (!person1 || !person2) {
+    return res
+      .status(400)
+      .json({ error: 'Missing required fields: person1, person2' });
+  }
+
+  const requiredFields = ['date', 'time', 'lat', 'lng', 'timezone'];
+  for (const [idx, person] of [person1, person2].entries()) {
+    const label = idx === 0 ? 'person1' : 'person2';
+    for (const f of requiredFields) {
+      if (person[f] === undefined || person[f] === null || person[f] === '') {
+        return res
+          .status(400)
+          .json({ error: `Missing required field for ${label}: ${f}` });
+      }
+    }
+  }
+
+  try {
+    const result = computeClassicalCompatibility(person1, person2, threshold);
+    res.json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error computing ashtakoot compatibility:', error);
+    res.status(500).json({ error: 'Failed to compute ashtakoot compatibility' });
+  }
+});
+
+/**
+ * @swagger
  * /api/planetaspects:
  *   post:
  *     summary: Calculate Vedic planetary aspects (drishti)
@@ -948,101 +1175,8 @@ app.post('/api/planetaspects', (req, res) => {
   }
 
   try {
-    // Normalize date format to yyyy-mm-dd
     const normalizedDate = normalizeDateToYmd(date);
-
-    // Compute birth chart using vedic-astrology
-    const vedicAstrology = require('vedic-astrology');
-    const swisseph = require('swisseph-v2');
-    const birthChart = vedicAstrology.positioner.getBirthChart(normalizedDate, time, lat, lng, timezone);
-
-    // Map Rashi codes to sign numbers (1-12)
-    const rashiToNumber = {
-      'Ar': 1, 'Ta': 2, 'Ge': 3, 'Cn': 4, 'Le': 5, 'Vi': 6,
-      'Li': 7, 'Sc': 8, 'Sg': 9, 'Cp': 10, 'Aq': 11, 'Pi': 12
-    };
-
-    // Helper function to calculate outer planets using swisseph
-    const calculateOuterPlanet = (planetNum, normalizedDate, time, timezone) => {
-      try {
-        const [year, month, day] = normalizedDate.split('-').map(Number);
-        const [hours, minutes, seconds] = time.split(':').map(Number);
-        
-        let utcHours = hours - timezone;
-        let utcDay = day;
-        if (utcHours < 0) {
-          utcHours += 24;
-          utcDay--;
-        } else if (utcHours >= 24) {
-          utcHours -= 24;
-          utcDay++;
-        }
-        
-        const jd = swisseph.swe_julday(year, month, utcDay, utcHours + minutes/60 + seconds/3600, 1);
-        swisseph.swe_set_sid_mode(1);
-        const ayanamsha = swisseph.swe_get_ayanamsa_ut(jd);
-        
-        const result = swisseph.swe_calc_ut(jd, planetNum, 0);
-        const tropicalLong = result.longitude;
-        const siderealLong = tropicalLong - ayanamsha;
-        const normalizedLong = siderealLong < 0 ? siderealLong + 360 : siderealLong;
-        const sign = Math.floor(normalizedLong / 30) + 1;
-        const isRetro = result.longitudeSpeed < 0;
-        
-        return { current_sign: sign, isRetro: String(isRetro) };
-      } catch (error) {
-        return { current_sign: 0, isRetro: "false" };
-      }
-    };
-
-    // Build rashi data for aspect calculation
-    const rashiData = {
-      Ascendant: {
-        current_sign: rashiToNumber[birthChart.meta.La.rashi] || 0,
-        isRetro: String(birthChart.meta.La.isRetrograde || false)
-      },
-      Sun: {
-        current_sign: rashiToNumber[birthChart.meta.Su.rashi] || 0,
-        isRetro: String(birthChart.meta.Su.isRetrograde || false)
-      },
-      Moon: {
-        current_sign: rashiToNumber[birthChart.meta.Mo.rashi] || 0,
-        isRetro: String(birthChart.meta.Mo.isRetrograde || false)
-      },
-      Mars: {
-        current_sign: rashiToNumber[birthChart.meta.Ma.rashi] || 0,
-        isRetro: String(birthChart.meta.Ma.isRetrograde || false)
-      },
-      Mercury: {
-        current_sign: rashiToNumber[birthChart.meta.Me.rashi] || 0,
-        isRetro: String(birthChart.meta.Me.isRetrograde || false)
-      },
-      Jupiter: {
-        current_sign: rashiToNumber[birthChart.meta.Ju.rashi] || 0,
-        isRetro: String(birthChart.meta.Ju.isRetrograde || false)
-      },
-      Venus: {
-        current_sign: rashiToNumber[birthChart.meta.Ve.rashi] || 0,
-        isRetro: String(birthChart.meta.Ve.isRetrograde || false)
-      },
-      Saturn: {
-        current_sign: rashiToNumber[birthChart.meta.Sa.rashi] || 0,
-        isRetro: String(birthChart.meta.Sa.isRetrograde || false)
-      },
-      Rahu: {
-        current_sign: rashiToNumber[birthChart.meta.Ra.rashi] || 0,
-        isRetro: String(birthChart.meta.Ra.isRetrograde || false)
-      },
-      Ketu: {
-        current_sign: rashiToNumber[birthChart.meta.Ke.rashi] || 0,
-        isRetro: String(birthChart.meta.Ke.isRetrograde || false)
-      },
-      Uranus: calculateOuterPlanet(7, normalizedDate, time, timezone),
-      Neptune: calculateOuterPlanet(8, normalizedDate, time, timezone),
-      Pluto: calculateOuterPlanet(9, normalizedDate, time, timezone)
-    };
-
-    // Calculate aspects
+    const { rashiData } = computeFullRashiData(normalizedDate, time, lat, lng, timezone);
     const aspectData = calculatePlanetAspects(rashiData);
 
     res.json({
@@ -1163,79 +1297,9 @@ app.post('/api/horoscope', (req, res) => {
   }
 
   try {
-    // Compute birth chart using vedic-astrology
-    const birthChart = vedicAstrology.positioner.getBirthChart(date, time, lat, lng, timezone);
+    const normalizedDate = normalizeDateToYmd(date);
+    const { birthChart, rashiData } = computeFullRashiData(normalizedDate, time, lat, lng, timezone);
 
-    // Map Rashi codes to sign numbers (1-12)
-    const rashiToNumber = {
-      'Ar': 1, 'Ta': 2, 'Ge': 3, 'Cn': 4, 'Le': 5, 'Vi': 6,
-      'Li': 7, 'Sc': 8, 'Sg': 9, 'Cp': 10, 'Aq': 11, 'Pi': 12
-    };
-
-    // Helper function to calculate house number
-    const calculateHouseNumber = (planetLongitude, lagnaLongitude) => {
-      let diff = planetLongitude - lagnaLongitude;
-      if (diff < 0) diff += 360;
-      const houseNumber = Math.floor(diff / 30) + 1;
-      return houseNumber > 12 ? houseNumber - 12 : houseNumber;
-    };
-
-    const lagnaLongitude = birthChart.meta.La.longitude;
-
-    // Transform data to match rasi1.json format
-    const rashiData = {
-      Ascendant: {
-        current_sign: rashiToNumber[birthChart.meta.La.rashi] || 0,
-        isRetro: String(birthChart.meta.La.isRetrograde || false)
-      },
-      Sun: {
-        current_sign: rashiToNumber[birthChart.meta.Su.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Su.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Su.isRetrograde || false)
-      },
-      Moon: {
-        current_sign: rashiToNumber[birthChart.meta.Mo.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Mo.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Mo.isRetrograde || false)
-      },
-      Mars: {
-        current_sign: rashiToNumber[birthChart.meta.Ma.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ma.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ma.isRetrograde || false)
-      },
-      Mercury: {
-        current_sign: rashiToNumber[birthChart.meta.Me.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Me.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Me.isRetrograde || false)
-      },
-      Jupiter: {
-        current_sign: rashiToNumber[birthChart.meta.Ju.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ju.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ju.isRetrograde || false)
-      },
-      Venus: {
-        current_sign: rashiToNumber[birthChart.meta.Ve.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ve.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ve.isRetrograde || false)
-      },
-      Saturn: {
-        current_sign: rashiToNumber[birthChart.meta.Sa.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Sa.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Sa.isRetrograde || false)
-      },
-      Rahu: {
-        current_sign: rashiToNumber[birthChart.meta.Ra.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ra.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ra.isRetrograde || false)
-      },
-      Ketu: {
-        current_sign: rashiToNumber[birthChart.meta.Ke.rashi] || 0,
-        house_number: calculateHouseNumber(birthChart.meta.Ke.longitude, lagnaLongitude),
-        isRetro: String(birthChart.meta.Ke.isRetrograde || false)
-      }
-    };
-
-    // Generate SVG
     const svg = generateHoroscopeSVG(rashiData, birthChart, {
       size: size || 800,
       chartType: chartType || 'north-indian'
@@ -1264,7 +1328,7 @@ app.post('/api/horoscope', (req, res) => {
  * /api/generic-predictions:
  *   get:
  *     summary: Get generic prediction data (planet-in-house and house-by-rashi)
- *     description: Returns static JSON from data/planet.json and data/house.json for building generic predictions by lookup. planetInHouse keys = planet names then house "1".."12"; houseByRashi keys = house "1".."12" then rashi "1".."12".
+ *     description: Returns static JSON from data/planet.json and data/house.json for building generic predictions by lookup. planetInHouse keys = Sun..Ketu plus Uranus, Neptune, Pluto, then house "1".."12"; houseByRashi keys = house "1".."12" then rashi "1".."12". Locale-specific files live under data/{locale}/ when present.
  *     tags: [Rashi]
  *     parameters:
  *       - in: query
@@ -1303,28 +1367,91 @@ function readJsonIfExists(filePath) {
   if (!fs.existsSync(filePath)) return null;
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
-app.get('/api/generic-predictions', (req, res) => {
+app.get('/api/generic-predictions', async (req, res) => {
   try {
+    const { ensureRashiOverridesFresh, getGenericFileOverride, getYogaDescriptionsOverride } = require('./rashiContentOverrides');
+    await ensureRashiOverridesFresh();
     const baseDataDir = path.join(__dirname, 'data');
     const locale = (req.query.locale && String(req.query.locale).toLowerCase()) || 'en';
     const dataDir = getGenericPredictionsDataDir(baseDataDir, locale);
     const enDir = locale === 'en' ? dataDir : getGenericPredictionsDataDir(baseDataDir, 'en');
-    const files = ['planet.json', 'house.json', 'dasha-generic.json', 'dasha-maha.json', 'pratyadasha-generic.json'];
-    const keys = ['planetInHouse', 'houseByRashi', 'dashaGeneric', 'dashaMaha', 'pratyadashaGeneric'];
+    const files = [
+      'planet.json',
+      'house.json',
+      'dasha-generic.json',
+      'dasha-maha.json',
+      'pratyadasha-generic.json',
+      'shani-moon-transit-phases.json'
+    ];
+    const keys = [
+      'planetInHouse',
+      'houseByRashi',
+      'dashaGeneric',
+      'dashaMaha',
+      'pratyadashaGeneric',
+      'shaniMoonPhases'
+    ];
     const out = {};
     for (let i = 0; i < files.length; i++) {
-      let data = readJsonIfExists(path.join(dataDir, files[i]));
-      if (data == null && dataDir !== enDir) data = readJsonIfExists(path.join(enDir, files[i]));
+      const stem = files[i].replace(/\.json$/i, '');
+      let data = getGenericFileOverride(stem, locale);
+      if (!data) {
+        data = readJsonIfExists(path.join(dataDir, files[i]));
+        if (data == null && dataDir !== enDir) data = readJsonIfExists(path.join(enDir, files[i]));
+      }
       if (data == null) {
         return res.status(500).json({ error: 'Failed to load generic prediction data', missing: files[i] });
       }
       out[keys[i]] = data;
     }
+    const yogaDescPath = path.join(baseDataDir, 'yoga-descriptions.json');
+    const yogaDescriptions = getYogaDescriptionsOverride() || readJsonIfExists(yogaDescPath) || {};
+    out.yogaDescriptions = yogaDescriptions;
     res.json(out);
   } catch (err) {
     console.error('Error serving generic-predictions:', err);
     res.status(500).json({ error: 'Failed to load generic prediction data' });
   }
+});
+
+/**
+ * @swagger
+ * /version:
+ *   get:
+ *     summary: Version endpoint
+ *     description: Returns the deployed application version (from package.json and optional build/git info)
+ *     tags: [Health]
+ *     responses:
+ *       200:
+ *         description: Version info
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 name:
+ *                   type: string
+ *                 version:
+ *                   type: string
+ *                 build:
+ *                   type: string
+ *                   description: Build or git commit if set at deploy time
+ */
+app.get('/version', (req, res) => {
+  let version = process.env.BUILD_VERSION || process.env.npm_package_version;
+  if (!version) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+      version = pkg.version || 'unknown';
+    } catch {
+      version = 'unknown';
+    }
+  }
+  res.json({
+    name: 'rashi-api',
+    version,
+    ...(process.env.GIT_COMMIT && { build: process.env.GIT_COMMIT }),
+  });
 });
 
 /**
@@ -1349,6 +1476,160 @@ app.get('/api/generic-predictions', (req, res) => {
  *                   type: string
  *                   example: "Rashi Microservice"
  */
+/**
+ * @swagger
+ * /api/family-dasha-window:
+ *   post:
+ *     summary: Batch Vimshottari Maha+Antar segments for N family members within a date window
+ *     description: |
+ *       Returns per-member Maha+Antar segments that intersect [windowStart, windowEnd] plus the next
+ *       Antar transition after now (even if outside the window). Includes a deterministic household
+ *       overview (transition clusters within ±14 days, dominant lord themes, key bullet keys).
+ *     tags: [Vimshottari]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [members, windowStart, windowEnd]
+ *             properties:
+ *               members:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required: [id, date, time, lat, lng, timezone]
+ *                   properties:
+ *                     id: { type: string }
+ *                     displayName: { type: string }
+ *                     date: { type: string, example: "1979-09-05" }
+ *                     time: { type: string, example: "19:35:00" }
+ *                     lat: { type: number }
+ *                     lng: { type: number }
+ *                     timezone: { type: number }
+ *               windowStart: { type: string, format: date-time }
+ *               windowEnd: { type: string, format: date-time }
+ *     responses:
+ *       200:
+ *         description: Family dasha window payload
+ *       400:
+ *         description: Invalid window or missing fields
+ */
+app.post('/api/family-dasha-window', (req, res) => {
+  const { members, windowStart, windowEnd } = req.body || {};
+  if (!Array.isArray(members) || !windowStart || !windowEnd) {
+    return res.status(400).json({ error: 'Missing required fields: members[], windowStart, windowEnd' });
+  }
+  if (members.length > 25) {
+    return res.status(400).json({ error: 'Too many members (max 25)' });
+  }
+  try {
+    const data = computeFamilyDashaWindow({ members, windowStart, windowEnd });
+    return res.json({ success: true, data, timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('Error computing family dasha window:', error);
+    return res.status(400).json({ error: error.message || 'Failed to compute family dasha window' });
+  }
+});
+
+/**
+ * @swagger
+ * /api/shani-moon-transit:
+ *   post:
+ *     summary: Sade Sati + Dhaiya segments (Saturn vs natal Moon)
+ *     description: |
+ *       Whole-sign phases from natal Moon: Sade Sati (12th, 1st, 2nd) and Dhaiya (4th, 8th).
+ *       Lahiri sidereal; daily sample at local noon; segment boundaries at local midnight.
+ *     tags: [ShaniMoonTransit]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [date, time, lat, lng, timezone, windowStart, windowEnd]
+ *             properties:
+ *               date: { type: string, example: "1990-06-15" }
+ *               time: { type: string, example: "14:30:00" }
+ *               lat: { type: number }
+ *               lng: { type: number }
+ *               timezone: { type: number, description: "Hours east of UTC" }
+ *               windowStart: { type: string, example: "2010-01-01", description: "yyyy-mm-dd inclusive" }
+ *               windowEnd: { type: string, example: "2040-12-31" }
+ *     responses:
+ *       200:
+ *         description: Moon reference + segments
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Server error
+ */
+app.post('/api/shani-moon-transit', (req, res) => {
+  const { date, time, lat, lng, timezone, windowStart, windowEnd } = req.body || {};
+
+  if (
+    !date ||
+    !time ||
+    lat === undefined ||
+    lng === undefined ||
+    timezone === undefined ||
+    !windowStart ||
+    !windowEnd
+  ) {
+    return res.status(400).json({
+      error:
+        'Missing required fields: date, time, lat, lng, timezone, windowStart, windowEnd (window dates as yyyy-mm-dd)'
+    });
+  }
+
+  try {
+    let normalizedDate = date;
+    const ddmmyyyyPattern = /^(\d{2})-(\d{2})-(\d{4})$/;
+    const match = date.match(ddmmyyyyPattern);
+    if (match) {
+      const [, day, month, yearPart] = match;
+      normalizedDate = `${yearPart}-${month}-${day}`;
+    }
+
+    const ws = String(windowStart).slice(0, 10);
+    const we = String(windowEnd).slice(0, 10);
+
+    const data = computeShaniMoonTransit({
+      date: normalizedDate,
+      time,
+      lat: Number(lat),
+      lng: Number(lng),
+      timezone: Number(timezone),
+      windowStart: ws,
+      windowEnd: we
+    });
+
+    const nowInfo = currentPhaseAt({
+      date: normalizedDate,
+      time,
+      lat: Number(lat),
+      lng: Number(lng),
+      timezone: Number(timezone)
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        ...data,
+        currentPhase: nowInfo
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error computing shani-moon-transit:', error);
+    const msg = error && error.message ? String(error.message) : 'Failed to compute shani-moon-transit';
+    if (msg.includes('windowStart') || msg.includes('before')) {
+      return res.status(400).json({ error: msg });
+    }
+    return res.status(500).json({ error: 'Failed to compute shani-moon-transit', detail: msg });
+  }
+});
+
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', service: 'Rashi Microservice' });
 });
@@ -1358,8 +1639,18 @@ module.exports = app;
 
 // Start server only if not in test environment
 if (require.main === module) {
-app.listen(PORT, () => {
-  console.log(`Rashi microservice running on port ${PORT}`);
-    console.log(`Swagger documentation available at http://localhost:${PORT}/api-docs`);
-});
+  (async () => {
+    try {
+      const { refreshRashiContentOverrides } = require('./rashiContentOverrides');
+      await refreshRashiContentOverrides();
+      await loadRashiRuntimeConfig();
+    } catch (e) {
+      console.warn('[rashiContentOverrides] startup:', e && e.message ? e.message : e);
+    }
+    const runtimePort = Number.parseInt(getRashiTunable('PORT', String(PORT)), 10) || PORT;
+    app.listen(runtimePort, () => {
+      console.log(`Rashi microservice running on port ${runtimePort}`);
+      console.log(`Swagger documentation available at http://localhost:${runtimePort}/api-docs`);
+    });
+  })();
 }
