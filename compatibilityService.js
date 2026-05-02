@@ -1,10 +1,10 @@
 const vedicAstrology = require('vedic-astrology');
-const { normalizeDateToYmd } = require('./utils');
+const { normalizeDateToYmd, normalizeTimeToHms } = require('./utils');
 
 function normalizeBirthDetails(person) {
   return {
     dateString: normalizeDateToYmd(person.date),
-    timeString: person.time,
+    timeString: normalizeTimeToHms(person.time),
     lat: person.lat,
     lng: person.lng,
     timezone: person.timezone

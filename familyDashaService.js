@@ -1,5 +1,5 @@
 const { generateVimshottariDasha } = require('./vimshottariService');
-const { normalizeDateToYmd } = require('./utils');
+const { normalizeDateToYmd, normalizeTimeToHms } = require('./utils');
 
 /** Generic per-lord tone for v1 family horizon (Option A baseline). Aligns with PRATYADASHA_YEAR_OVERVIEW_EPICS. */
 const LORD_TONE = {
@@ -31,7 +31,7 @@ function clampToWindow(seg, winStart, winEnd) {
  */
 function computeMemberLane(member, winStart, winEnd, now) {
   const date = normalizeDateToYmd(member.date);
-  const time = member.time;
+  const time = normalizeTimeToHms(member.time);
   const lat = Number(member.lat);
   const lng = Number(member.lng);
   const tz = Number(member.timezone);

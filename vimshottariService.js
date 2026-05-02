@@ -51,7 +51,11 @@ const NAKSHATRA_SPAN = 360 / 27; // 13°20'
  */
 function toUtcDate(normalizedDate, time, timezone) {
   const [year, month, day] = normalizedDate.split('-').map(Number);
-  const [hours, minutes, seconds] = time.split(':').map(Number);
+  const parts = String(time).split(':');
+  const hours = Number(parts[0]);
+  const minutes = Number(parts[1]);
+  const secPart = parts[2] != null ? String(parts[2]).replace(/\.\d+$/, '') : '0';
+  const seconds = Number(secPart);
   const utcMillis =
     Date.UTC(year, month - 1, day, hours, minutes, seconds) -
     timezone * 60 * 60 * 1000;
