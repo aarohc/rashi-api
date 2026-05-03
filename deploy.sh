@@ -71,6 +71,13 @@ az functionapp config appsettings set \
 echo "▶️  Ensuring Function App is started..."
 az functionapp start --name "$FUNCTION_APP_NAME" --resource-group "$RESOURCE_GROUP" 2>/dev/null || true
 
+# Bundle shared numerology-core (monorepo path not present in Azure publish zip)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+echo "📎 Syncing shared/numerology-core into function app directory..."
+rm -rf "$SCRIPT_DIR/shared-numerology-core"
+cp -R "$REPO_ROOT/shared/numerology-core" "$SCRIPT_DIR/shared-numerology-core"
+
 # Deploy the function app (--build remote: npm install runs on Azure Linux, fixes native modules like swisseph-v2)
 echo "📤 Deploying function code..."
 func azure functionapp publish "$FUNCTION_APP_NAME" --node --build remote
@@ -96,6 +103,7 @@ sleep 120
 RASHI_BIRTH_JSON='{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5}'
 PRATYADASHA_JSON='{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5,"year":2025}'
 COMPAT_TWO_JSON='{"person1":{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5},"person2":{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5}}'
+COMPAT_WITH_NAMES_JSON='{"person1":{"date":"1990-05-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5,"name":"Arjun"},"person2":{"date":"1992-08-20","time":"11:00:00","lat":19.076,"lng":72.877,"timezone":5.5,"name":"Priya"}}'
 SHANI_JSON='{"date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5,"windowStart":"2020-01-01","windowEnd":"2025-12-31"}'
 FAMILY_DASHA_JSON='{"members":[{"id":"t","displayName":"Test","date":"1990-01-15","time":"10:30:00","lat":28.6,"lng":77.2,"timezone":5.5}],"windowStart":"2025-01-01T00:00:00.000Z","windowEnd":"2026-01-01T00:00:00.000Z"}'
 PANCHANG_JSON='{"date":"1990-01-15","lat":28.6,"lng":77.2,"timezone":5.5}'
@@ -187,7 +195,10 @@ rashi_verify_post "yogas" "/api/yogas" "$RASHI_BIRTH_JSON" '"yogas"'
 rashi_verify_post "panchang" "/api/panchang" "$PANCHANG_JSON" 'sunriseUtc'
 rashi_verify_post "shani-moon-transit" "/api/shani-moon-transit" "$SHANI_JSON" 'currentPhase'
 rashi_verify_post "ashtakoot" "/api/ashtakoot" "$COMPAT_TWO_JSON" 'nakshatra'
-rashi_verify_post "compatibility" "/api/compatibility" "$COMPAT_TWO_JSON" '"success"[[:space:]]*:[[:space:]]*true'
+rashi_verify_post "compatibility (no names)" "/api/compatibility" "$COMPAT_TWO_JSON" '"numerology"'
+rashi_verify_post "compatibility (with names/numerology)" "/api/compatibility" "$COMPAT_WITH_NAMES_JSON" '"lifePath"'
+# Verify the pair summary is present (cross-checks compatibility-lookup.json was bundled)
+rashi_verify_post "compatibility (pair summary)" "/api/compatibility" "$COMPAT_WITH_NAMES_JSON" '"pair"'
 rashi_verify_post "family-dasha-window" "/api/family-dasha-window" "$FAMILY_DASHA_JSON" '"lanes"'
 rashi_verify_post "choghadiya" "/api/choghadiya" "$CHOGHADIYA_JSON" '"day"'
 rashi_verify_post "planetaspects" "/api/planetaspects" "$RASHI_BIRTH_JSON" 'aspectsByPlanet'
@@ -226,7 +237,7 @@ echo "   - POST ${BASE_URL}/api/yogas"
 echo "   - POST ${BASE_URL}/api/panchang"
 echo "   - POST ${BASE_URL}/api/shani-moon-transit"
 echo "   - POST ${BASE_URL}/api/ashtakoot"
-echo "   - POST ${BASE_URL}/api/compatibility"
+echo "   - POST ${BASE_URL}/api/compatibility  (optional name fields → numerology block with lifePath, Chaldean, pair summary)"
 echo "   - POST ${BASE_URL}/api/family-dasha-window"
 echo "   - POST ${BASE_URL}/api/choghadiya"
 echo "   - POST ${BASE_URL}/api/planetaspects"

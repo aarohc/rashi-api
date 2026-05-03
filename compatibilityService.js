@@ -1,5 +1,32 @@
+const fs = require('fs');
+const path = require('path');
 const vedicAstrology = require('vedic-astrology');
 const { normalizeDateToYmd, normalizeTimeToHms } = require('./utils');
+
+function numerologyPackageDir() {
+  const bundled = path.join(__dirname, 'shared-numerology-core');
+  if (fs.existsSync(path.join(bundled, 'index.js'))) return bundled;
+  return path.join(__dirname, '../../shared/numerology-core');
+}
+
+const numerologyCore = require(numerologyPackageDir());
+const compatLookup = require(path.join(numerologyPackageDir(), 'compatibility-lookup.json'));
+
+function buildNumerologyPayload(person1, person2) {
+  const ymd1 = normalizeDateToYmd(person1.date);
+  const ymd2 = normalizeDateToYmd(person2.date);
+  const n1 = typeof person1.name === 'string' ? person1.name.trim() : '';
+  const n2 = typeof person2.name === 'string' ? person2.name.trim() : '';
+  try {
+    return numerologyCore.computePairNumerology(
+      { dateYmd: ymd1, name: n1 },
+      { dateYmd: ymd2, name: n2 },
+      compatLookup
+    );
+  } catch (err) {
+    return undefined;
+  }
+}
 
 function normalizeBirthDetails(person) {
   return {
@@ -104,13 +131,15 @@ function computeClassicalCompatibility(person1, person2, threshold) {
 
 function computeCompatibility(person1, person2, threshold) {
   const classical = computeClassicalCompatibility(person1, person2, threshold);
+  const numerology = buildNumerologyPayload(person1, person2);
   return {
     totalScore: classical.totalScore,
     normalizedScore: classical.normalizedScore,
     level: classical.level,
     helpText: classical.helpText,
     compatible: classical.compatible,
-    details: classical.details
+    details: classical.details,
+    numerology
   };
 }
 

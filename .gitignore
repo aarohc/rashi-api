@@ -34,3 +34,6 @@ build/
 # Azure Functions
 .azure/
 
+# Ephemeral copy of monorepo shared numerology (see deploy.sh)
+shared-numerology-core/
+
