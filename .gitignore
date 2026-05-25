@@ -37,3 +37,6 @@ build/
 # Ephemeral copy of monorepo shared numerology (see deploy.sh)
 shared-numerology-core/
 
+# Ephemeral copy of app locale registry for Azure Functions (see deploy.sh)
+shared-app-locale-registry/
+

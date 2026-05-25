@@ -1,0 +1,47 @@
+{
+  "Ketu": {
+    "summary": "This pratyadasha emphasizes spirituality, detachment, and inner reflection. Past karmas and healing may surface; focus on simplicity and letting go.",
+    "tone": "mixed",
+    "impact": 5
+  },
+  "Venus": {
+    "summary": "Relationships, creativity, and comfort are highlighted. A time for love, art, and material ease when approached with balance.",
+    "tone": "favorable",
+    "impact": 7.5
+  },
+  "Sun": {
+    "summary": "Leadership, confidence, and authority come to the fore. Career and respect from others may grow; balance ego with humility.",
+    "tone": "favorable",
+    "impact": 7
+  },
+  "Moon": {
+    "summary": "Emotions, mother, and change of place or mood are in focus. Travel and creativity supported; emotional balance is key.",
+    "tone": "mixed",
+    "impact": 6
+  },
+  "Mars": {
+    "summary": "Energy, courage, and initiative are strong. Property, technical work, or competition may feature; channel drive constructively.",
+    "tone": "mixed",
+    "impact": 6
+  },
+  "Rahu": {
+    "summary": "Sudden changes, ambition, and material pursuits are highlighted. Gains mixed with restlessness; stay grounded and avoid shortcuts.",
+    "tone": "mixed",
+    "impact": 5
+  },
+  "Jupiter": {
+    "summary": "Wisdom, growth, and good fortune are favored. Education, children, and dharma may flourish; a generally auspicious sub-period.",
+    "tone": "favorable",
+    "impact": 8
+  },
+  "Saturn": {
+    "summary": "Discipline, delays, and long-term gains through patience. Service and structure bring rewards; health and elders may need attention.",
+    "tone": "mixed",
+    "impact": 5.5
+  },
+  "Mercury": {
+    "summary": "Communication, business, and intellect are supported. Learning, writing, and trade may do well; balance restlessness with focus.",
+    "tone": "favorable",
+    "impact": 7.5
+  }
+}

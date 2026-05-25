@@ -1,7 +1,18 @@
 const path = require('path');
 const fs = require('fs');
 
-const SUPPORTED_LOCALES = ['en', 'es', 'gu', 'hi'];
+// rashiLocales.cjs: deploy copies shared-app-locale-registry/ here; local dev falls back to repo-root shared/
+function loadRashiLocales() {
+  const candidates = [
+    path.join(__dirname, '..', 'shared-app-locale-registry', 'generated', 'rashiLocales.cjs'),
+    path.join(__dirname, '..', '..', '..', 'shared', 'app-locale-registry', 'generated', 'rashiLocales.cjs')
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return require(p);
+  }
+  throw new Error(`rashiLocales.cjs not found. Tried:\n${candidates.join('\n')}`);
+}
+const { APP_LOCALE_CODES_ARRAY: SUPPORTED_LOCALES } = loadRashiLocales();
 
 function getBaseDataDir() {
   const candidates = [

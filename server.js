@@ -32,7 +32,7 @@ const swaggerOptions = {
       description: 'Vedic Astrology Rashi (Zodiac Sign) Calculation Microservice',
       contact: {
         name: 'API Support',
-        email: 'support@astrovoyages.com'
+        email: 'support@astrovoyages.net'
       },
       license: {
         name: 'ISC',
@@ -45,7 +45,7 @@ const swaggerOptions = {
         description: 'Development server'
       },
       {
-        url: 'https://api.astrovoyages.com',
+        url: 'https://api.astrovoyages.net',
         description: 'Production server'
       }
     ],
@@ -1335,9 +1335,9 @@ app.post('/api/horoscope', (req, res) => {
  *         name: locale
  *         schema:
  *           type: string
- *           enum: [en, es, gu, hi]
+ *           enum: [en, es, gu, hi, pa, mr, ta, kn]
  *           default: en
- *         description: Language for generic content (en=English, es=Spanish, gu=Gujarati, hi=Hindi)
+ *         description: Language for generic content (en=English, es=Spanish, gu=Gujarati, hi=Hindi, pa=Punjabi, mr=Marathi, ta=Tamil, kn=Kannada)
  *     responses:
  *       200:
  *         description: Generic prediction data
@@ -1355,7 +1355,7 @@ app.post('/api/horoscope', (req, res) => {
  *       500:
  *         description: Error reading data files
  */
-const SUPPORTED_LOCALES = ['en', 'es', 'gu', 'hi'];
+const { APP_LOCALE_CODES_ARRAY: SUPPORTED_LOCALES } = require(path.join(__dirname, '..', '..', 'shared', 'app-locale-registry', 'generated', 'rashiLocales.cjs'));
 function getGenericPredictionsDataDir(baseDataDir, locale) {
   const normalized = (locale && String(locale).toLowerCase()) || 'en';
   const chosen = SUPPORTED_LOCALES.includes(normalized) ? normalized : 'en';

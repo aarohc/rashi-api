@@ -1,0 +1,26 @@
+{
+  "sade_sati_12th": {
+    "title": "Sade Sati — first phase (12th from Moon)",
+    "summary": "A reflective stretch: closure, rest, and quietly tying up loose ends. Saturn asks for patience and honest review rather than rushing new beginnings."
+  },
+  "sade_sati_1st": {
+    "title": "Sade Sati — peak phase (over the Moon)",
+    "summary": "Saturn crosses your natal Moon’s sign: emotional habits, comfort, and self-image come up for maturity and steadier rhythms. Favor consistency over drama."
+  },
+  "sade_sati_2nd": {
+    "title": "Sade Sati — last phase (2nd from Moon)",
+    "summary": "Themes around resources, values, and speech often take center stage. Building sustainable habits and clear boundaries supports this consolidation period."
+  },
+  "dhaiya_4th": {
+    "title": "Dhaiya — 4th from Moon",
+    "summary": "Saturn emphasizes home, inner stability, and foundations. Practical upkeep—space, family logistics, emotional grounding—rewards steady effort."
+  },
+  "dhaiya_8th": {
+    "title": "Dhaiya — 8th from Moon",
+    "summary": "A cycle that highlights change, shared resources, and depth. Transparency and patience with transformation serve you better than control."
+  },
+  "none": {
+    "title": "Outside Sade Sati and Dhaiya",
+    "summary": "Saturn is not in the classic Sade Sati or Dhaiya positions relative to your natal Moon. You may still feel Saturn transits elsewhere in your chart."
+  }
+}

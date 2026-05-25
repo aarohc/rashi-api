@@ -1,0 +1,835 @@
+{
+  "Ketu": {
+    "Ketu": {
+      "summary": "Ketu–Ketu period deepens spiritual and karmic themes. Detachment, healing, and introspection are strong. Avoid impulsiveness; focus on inner peace and past-life resolution.",
+      "tone": "mixed",
+      "keywords": [
+        "spirituality",
+        "detachment",
+        "healing",
+        "karma"
+      ],
+      "impact": 5
+    },
+    "Venus": {
+      "summary": "Ketu–Venus blends spirituality with relationships and creativity. Unconventional love or artistic pursuits may surface. Balance material desires with inner growth.",
+      "tone": "mixed",
+      "keywords": [
+        "relationships",
+        "creativity",
+        "spirituality"
+      ],
+      "impact": 5
+    },
+    "Sun": {
+      "summary": "Ketu–Sun period can bring authority challenges or father-related matters. Spiritual leadership and research may flourish. Health and ego need care.",
+      "tone": "mixed",
+      "keywords": [
+        "authority",
+        "spirituality",
+        "health"
+      ],
+      "impact": 5
+    },
+    "Moon": {
+      "summary": "Ketu–Moon period affects emotions and mother-related matters. Travel, change of residence, or inner restlessness possible. Practice emotional balance.",
+      "tone": "mixed",
+      "keywords": [
+        "emotions",
+        "mother",
+        "travel"
+      ],
+      "impact": 5
+    },
+    "Mars": {
+      "summary": "Ketu–Mars can create sudden energy, accidents, or surgical events. Spiritual discipline and courage help. Avoid haste and aggression.",
+      "tone": "challenging",
+      "keywords": [
+        "energy",
+        "discipline",
+        "caution"
+      ],
+      "impact": 3
+    },
+    "Rahu": {
+      "summary": "Ketu–Rahu (Rahu in Ketu's period) often brings confusion and sudden shifts. Material gains mixed with instability. Stay grounded and avoid shortcuts.",
+      "tone": "challenging",
+      "keywords": [
+        "change",
+        "confusion",
+        "material"
+      ],
+      "impact": 3
+    },
+    "Jupiter": {
+      "summary": "Ketu–Jupiter supports spiritual growth, higher learning, and guru connection. Fortune through detachment and wisdom. Favorable for philosophy and travel.",
+      "tone": "favorable",
+      "keywords": [
+        "spirituality",
+        "wisdom",
+        "fortune"
+      ],
+      "impact": 7.5
+    },
+    "Saturn": {
+      "summary": "Ketu–Saturn emphasizes karma, service, and delays. Patience and discipline bring long-term gains. Health and older people may need attention.",
+      "tone": "mixed",
+      "keywords": [
+        "karma",
+        "patience",
+        "service"
+      ],
+      "impact": 5
+    },
+    "Mercury": {
+      "summary": "Ketu–Mercury blends intellect with mysticism. Interest in astrology, research, or unconventional studies. Communication may be direct or unusual.",
+      "tone": "mixed",
+      "keywords": [
+        "intellect",
+        "research",
+        "communication"
+      ],
+      "impact": 5
+    }
+  },
+  "Venus": {
+    "Ketu": {
+      "summary": "Venus–Ketu can bring unconventional relationships or spiritual beauty. Art, music, and healing combine. Some detachment from luxury may help.",
+      "tone": "mixed",
+      "keywords": [
+        "relationships",
+        "creativity",
+        "spirituality"
+      ],
+      "impact": 5
+    },
+    "Venus": {
+      "summary": "Venus–Venus period strongly favors love, marriage, luxury, and artistic success. Relationships and material comfort flourish. Enjoy but avoid overindulgence.",
+      "tone": "favorable",
+      "keywords": [
+        "love",
+        "marriage",
+        "wealth",
+        "art"
+      ],
+      "impact": 7.5
+    },
+    "Sun": {
+      "summary": "Venus–Sun blends charm with authority. Gains through partnerships, government, or senior contacts. Balance ego in relationships.",
+      "tone": "favorable",
+      "keywords": [
+        "partnerships",
+        "authority",
+        "gains"
+      ],
+      "impact": 7.5
+    },
+    "Moon": {
+      "summary": "Venus–Moon favors emotions, motherhood, and creative expression. Marriage, travel, and domestic happiness supported. Mood and comfort important.",
+      "tone": "favorable",
+      "keywords": [
+        "emotions",
+        "marriage",
+        "creativity"
+      ],
+      "impact": 7.5
+    },
+    "Mars": {
+      "summary": "Venus–Mars brings passion and drive to relationships. Property or partnership gains possible but disputes need care. Channel energy positively.",
+      "tone": "mixed",
+      "keywords": [
+        "passion",
+        "property",
+        "partnerships"
+      ],
+      "impact": 5
+    },
+    "Rahu": {
+      "summary": "Venus–Rahu can create sudden attraction, foreign partners, or unconventional romance. Material gains mixed with confusion. Stay honest in dealings.",
+      "tone": "mixed",
+      "keywords": [
+        "attraction",
+        "foreign",
+        "material"
+      ],
+      "impact": 5
+    },
+    "Jupiter": {
+      "summary": "Venus–Jupiter is highly favorable for marriage, children, wealth, and wisdom. Auspicious for expansion and dharma. One of the best combinations.",
+      "tone": "favorable",
+      "keywords": [
+        "marriage",
+        "wealth",
+        "wisdom",
+        "children"
+      ],
+      "impact": 8.5
+    },
+    "Saturn": {
+      "summary": "Venus–Saturn may delay marriage or bring older partners. Gains through discipline and patience. Property and long-term stability with effort.",
+      "tone": "mixed",
+      "keywords": [
+        "delays",
+        "discipline",
+        "property"
+      ],
+      "impact": 5
+    },
+    "Mercury": {
+      "summary": "Venus–Mercury favors creativity, communication, and business. Relationships and intellectual pursuits flourish. Balance indulgence with focus.",
+      "tone": "favorable",
+      "keywords": [
+        "creativity",
+        "communication",
+        "relationships",
+        "wealth"
+      ],
+      "impact": 7.5
+    }
+  },
+  "Sun": {
+    "Ketu": {
+      "summary": "Sun–Ketu period may affect father or authority figures. Spiritual leadership and research possible. Health and ego need balance.",
+      "tone": "mixed",
+      "keywords": [
+        "authority",
+        "spirituality",
+        "father"
+      ],
+      "impact": 5
+    },
+    "Venus": {
+      "summary": "Sun–Venus brings charm and authority together. Gains through partnerships and government. Good for career and marriage.",
+      "tone": "favorable",
+      "keywords": [
+        "authority",
+        "partnerships",
+        "career"
+      ],
+      "impact": 7.5
+    },
+    "Sun": {
+      "summary": "Sun–Sun emphasizes leadership, vitality, and self-confidence. Career advancement and respect. Manage ego and father-related matters.",
+      "tone": "favorable",
+      "keywords": [
+        "leadership",
+        "career",
+        "vitality"
+      ],
+      "impact": 7.5
+    },
+    "Moon": {
+      "summary": "Sun–Moon blends authority with emotions. Public life, mother, and mood may interplay. Balance confidence with sensitivity.",
+      "tone": "mixed",
+      "keywords": [
+        "authority",
+        "emotions",
+        "public"
+      ],
+      "impact": 5
+    },
+    "Mars": {
+      "summary": "Sun–Mars brings courage and leadership. Strong for career, property, or technical work. Avoid aggression and conflicts.",
+      "tone": "favorable",
+      "keywords": [
+        "courage",
+        "career",
+        "property"
+      ],
+      "impact": 7.5
+    },
+    "Rahu": {
+      "summary": "Sun–Rahu can create sudden career shifts or authority challenges. Ambition and foreign connections. Ego and confusion need care.",
+      "tone": "mixed",
+      "keywords": [
+        "career",
+        "ambition",
+        "foreign"
+      ],
+      "impact": 5
+    },
+    "Jupiter": {
+      "summary": "Sun–Jupiter strongly supports wisdom, father, and career. Auspicious for higher education and authority. One of the best periods.",
+      "tone": "favorable",
+      "keywords": [
+        "wisdom",
+        "career",
+        "fortune"
+      ],
+      "impact": 8.5
+    },
+    "Saturn": {
+      "summary": "Sun–Saturn may bring delays, hard work, or father-related stress. Long-term gains through discipline. Health and authority need patience.",
+      "tone": "mixed",
+      "keywords": [
+        "delays",
+        "discipline",
+        "authority"
+      ],
+      "impact": 5
+    },
+    "Mercury": {
+      "summary": "Sun–Mercury favors intellect, communication, and business. Career through writing, trade, or accounts. Balance mental stress.",
+      "tone": "favorable",
+      "keywords": [
+        "intellect",
+        "business",
+        "career"
+      ],
+      "impact": 7.5
+    }
+  },
+  "Moon": {
+    "Ketu": {
+      "summary": "Moon–Ketu affects emotions and mother. Travel or change of residence possible. Inner restlessness and spiritual growth.",
+      "tone": "mixed",
+      "keywords": [
+        "emotions",
+        "mother",
+        "travel"
+      ],
+      "impact": 5
+    },
+    "Venus": {
+      "summary": "Moon–Venus favors emotions, marriage, and creativity. Domestic happiness and artistic pursuits. Good for comfort and partnership.",
+      "tone": "favorable",
+      "keywords": [
+        "emotions",
+        "marriage",
+        "creativity"
+      ],
+      "impact": 7.5
+    },
+    "Sun": {
+      "summary": "Moon–Sun blends emotions with authority. Mother and father dynamics; public life and mood. Balance confidence with sensitivity.",
+      "tone": "mixed",
+      "keywords": [
+        "emotions",
+        "authority",
+        "public"
+      ],
+      "impact": 5
+    },
+    "Moon": {
+      "summary": "Moon–Moon emphasizes emotions, mother, travel, and change. Strong for creativity and public appeal. Mood swings need management.",
+      "tone": "mixed",
+      "keywords": [
+        "emotions",
+        "mother",
+        "creativity"
+      ],
+      "impact": 5
+    },
+    "Mars": {
+      "summary": "Moon–Mars brings energy to emotions. Short travels, siblings, or property may be active. Avoid impulsive emotional decisions.",
+      "tone": "mixed",
+      "keywords": [
+        "energy",
+        "emotions",
+        "property"
+      ],
+      "impact": 5
+    },
+    "Rahu": {
+      "summary": "Moon–Rahu can create emotional confusion, foreign travel, or unconventional paths. Gains mixed with mood swings. Stay grounded.",
+      "tone": "mixed",
+      "keywords": [
+        "emotions",
+        "foreign",
+        "confusion"
+      ],
+      "impact": 5
+    },
+    "Jupiter": {
+      "summary": "Moon–Jupiter favors wisdom, mother, and fortune. Highly auspicious for education, travel, and expansion. Emotional and material growth.",
+      "tone": "favorable",
+      "keywords": [
+        "wisdom",
+        "fortune",
+        "mother"
+      ],
+      "impact": 8.5
+    },
+    "Saturn": {
+      "summary": "Moon–Saturn may bring emotional delays or mother-related concerns. Patience and service help. Long-term emotional stability with effort.",
+      "tone": "mixed",
+      "keywords": [
+        "emotions",
+        "delays",
+        "patience"
+      ],
+      "impact": 5
+    },
+    "Mercury": {
+      "summary": "Moon–Mercury supports communication, creativity, and business. Emotions and intellect work together. Good for writing and trade.",
+      "tone": "favorable",
+      "keywords": [
+        "communication",
+        "creativity",
+        "business"
+      ],
+      "impact": 7.5
+    }
+  },
+  "Mars": {
+    "Ketu": {
+      "summary": "Mars–Ketu can bring sudden energy, accidents, or surgical events. Spiritual discipline and courage help. Avoid haste.",
+      "tone": "challenging",
+      "keywords": [
+        "energy",
+        "discipline",
+        "caution"
+      ],
+      "impact": 3
+    },
+    "Venus": {
+      "summary": "Mars–Venus brings passion to relationships. Property or partnership gains possible. Channel energy; avoid disputes.",
+      "tone": "mixed",
+      "keywords": [
+        "passion",
+        "property",
+        "partnerships"
+      ],
+      "impact": 5
+    },
+    "Sun": {
+      "summary": "Mars–Sun favors courage, career, and leadership. Strong for technical work and authority. Avoid aggression.",
+      "tone": "favorable",
+      "keywords": [
+        "courage",
+        "career",
+        "authority"
+      ],
+      "impact": 7.5
+    },
+    "Moon": {
+      "summary": "Mars–Moon adds energy to emotions. Short travels, siblings, or property active. Manage emotional impulsiveness.",
+      "tone": "mixed",
+      "keywords": [
+        "energy",
+        "emotions",
+        "property"
+      ],
+      "impact": 5
+    },
+    "Mars": {
+      "summary": "Mars–Mars emphasizes courage, property, and technical work. High energy; avoid conflicts and accidents. Channel into sports or discipline.",
+      "tone": "mixed",
+      "keywords": [
+        "courage",
+        "property",
+        "energy"
+      ],
+      "impact": 5
+    },
+    "Rahu": {
+      "summary": "Mars–Rahu can create sudden aggression, litigation, or foreign involvement. Property and technical gains possible. Avoid risks.",
+      "tone": "challenging",
+      "keywords": [
+        "aggression",
+        "property",
+        "caution"
+      ],
+      "impact": 3
+    },
+    "Jupiter": {
+      "summary": "Mars–Jupiter supports courage with wisdom. Favorable for law, religion, property, and higher education. Balanced growth.",
+      "tone": "favorable",
+      "keywords": [
+        "courage",
+        "wisdom",
+        "property"
+      ],
+      "impact": 7.5
+    },
+    "Saturn": {
+      "summary": "Mars–Saturn may bring delays, hard work, or health concerns. Property and technical gains with patience. Avoid litigation.",
+      "tone": "mixed",
+      "keywords": [
+        "delays",
+        "property",
+        "patience"
+      ],
+      "impact": 5
+    },
+    "Mercury": {
+      "summary": "Mars–Mercury favors communication, technical work, and business. Sharp intellect and courage. Good for trade and accounts.",
+      "tone": "favorable",
+      "keywords": [
+        "communication",
+        "business",
+        "courage"
+      ],
+      "impact": 7.5
+    }
+  },
+  "Rahu": {
+    "Ketu": {
+      "summary": "Rahu–Ketu brings confusion and sudden shifts. Material gains mixed with instability. Spiritual grounding helps.",
+      "tone": "challenging",
+      "keywords": [
+        "change",
+        "confusion",
+        "material"
+      ],
+      "impact": 3
+    },
+    "Venus": {
+      "summary": "Rahu–Venus can create sudden attraction or unconventional romance. Material gains; stay honest in dealings.",
+      "tone": "mixed",
+      "keywords": [
+        "attraction",
+        "foreign",
+        "material"
+      ],
+      "impact": 5
+    },
+    "Sun": {
+      "summary": "Rahu–Sun may bring career shifts or authority challenges. Ambition and foreign connections. Manage ego.",
+      "tone": "mixed",
+      "keywords": [
+        "career",
+        "ambition",
+        "foreign"
+      ],
+      "impact": 5
+    },
+    "Moon": {
+      "summary": "Rahu–Moon can create emotional confusion or foreign travel. Gains mixed with mood swings. Stay grounded.",
+      "tone": "mixed",
+      "keywords": [
+        "emotions",
+        "foreign",
+        "confusion"
+      ],
+      "impact": 5
+    },
+    "Mars": {
+      "summary": "Rahu–Mars may bring sudden aggression, litigation, or foreign involvement. Property gains with risk. Avoid haste.",
+      "tone": "challenging",
+      "keywords": [
+        "aggression",
+        "property",
+        "caution"
+      ],
+      "impact": 3
+    },
+    "Rahu": {
+      "summary": "Rahu–Rahu period emphasizes ambition, foreign matters, and sudden changes. Technology, politics, or unconventional success. Stay ethical.",
+      "tone": "mixed",
+      "keywords": [
+        "ambition",
+        "foreign",
+        "technology"
+      ],
+      "impact": 5
+    },
+    "Jupiter": {
+      "summary": "Rahu–Jupiter can bring gains through foreign contacts, education, or unconventional wisdom. Expansion with some confusion.",
+      "tone": "mixed",
+      "keywords": [
+        "foreign",
+        "education",
+        "expansion"
+      ],
+      "impact": 5
+    },
+    "Saturn": {
+      "summary": "Rahu–Saturn often creates delays, karma, and unconventional service. Long-term gains through patience. Avoid shortcuts.",
+      "tone": "challenging",
+      "keywords": [
+        "delays",
+        "karma",
+        "patience"
+      ],
+      "impact": 3
+    },
+    "Mercury": {
+      "summary": "Rahu–Mercury favors communication, technology, and unconventional business. Sharp but scattered energy. Focus helps.",
+      "tone": "mixed",
+      "keywords": [
+        "communication",
+        "technology",
+        "business"
+      ],
+      "impact": 5
+    }
+  },
+  "Jupiter": {
+    "Ketu": {
+      "summary": "Jupiter–Ketu supports spiritual growth and higher learning. Fortune through detachment and wisdom. Favorable for philosophy.",
+      "tone": "favorable",
+      "keywords": [
+        "spirituality",
+        "wisdom",
+        "fortune"
+      ],
+      "impact": 7.5
+    },
+    "Venus": {
+      "summary": "Jupiter–Venus is highly favorable for marriage, wealth, and creativity. One of the best combinations. Expansion and dharma.",
+      "tone": "favorable",
+      "keywords": [
+        "marriage",
+        "wealth",
+        "wisdom"
+      ],
+      "impact": 8.5
+    },
+    "Sun": {
+      "summary": "Jupiter–Sun strongly supports wisdom, father, and career. Auspicious for higher education and authority.",
+      "tone": "favorable",
+      "keywords": [
+        "wisdom",
+        "career",
+        "fortune"
+      ],
+      "impact": 7.5
+    },
+    "Moon": {
+      "summary": "Jupiter–Moon favors wisdom, mother, and fortune. Highly auspicious for education, travel, and emotional growth.",
+      "tone": "favorable",
+      "keywords": [
+        "wisdom",
+        "fortune",
+        "mother"
+      ],
+      "impact": 8.5
+    },
+    "Mars": {
+      "summary": "Jupiter–Mars supports courage with wisdom. Favorable for law, religion, property, and higher education.",
+      "tone": "favorable",
+      "keywords": [
+        "courage",
+        "wisdom",
+        "property"
+      ],
+      "impact": 7.5
+    },
+    "Rahu": {
+      "summary": "Jupiter–Rahu can bring gains through foreign contacts or unconventional education. Expansion with some confusion.",
+      "tone": "mixed",
+      "keywords": [
+        "foreign",
+        "education",
+        "expansion"
+      ],
+      "impact": 5
+    },
+    "Jupiter": {
+      "summary": "Jupiter–Jupiter is highly auspicious. Wisdom, children, fortune, and dharma flourish. One of the best periods.",
+      "tone": "favorable",
+      "keywords": [
+        "wisdom",
+        "children",
+        "fortune",
+        "dharma"
+      ],
+      "impact": 8.5
+    },
+    "Saturn": {
+      "summary": "Jupiter–Saturn blends wisdom with discipline. Gains through patience and service. Some delays but long-term growth.",
+      "tone": "mixed",
+      "keywords": [
+        "wisdom",
+        "patience",
+        "service"
+      ],
+      "impact": 5
+    },
+    "Mercury": {
+      "summary": "Jupiter–Mercury favors education, business, and communication. Intellectual and material expansion. Good for trade and teaching.",
+      "tone": "favorable",
+      "keywords": [
+        "education",
+        "business",
+        "wisdom"
+      ],
+      "impact": 7.5
+    }
+  },
+  "Saturn": {
+    "Ketu": {
+      "summary": "Saturn–Ketu emphasizes karma, service, and delays. Patience and discipline bring long-term gains. Spiritual discipline helps.",
+      "tone": "mixed",
+      "keywords": [
+        "karma",
+        "patience",
+        "service"
+      ],
+      "impact": 5
+    },
+    "Venus": {
+      "summary": "Saturn–Venus may delay marriage or bring older partners. Gains through discipline. Property and stability with effort.",
+      "tone": "mixed",
+      "keywords": [
+        "delays",
+        "discipline",
+        "property"
+      ],
+      "impact": 5
+    },
+    "Sun": {
+      "summary": "Saturn–Sun may bring delays, hard work, or father-related stress. Long-term gains through discipline. Health needs care.",
+      "tone": "mixed",
+      "keywords": [
+        "delays",
+        "discipline",
+        "authority"
+      ],
+      "impact": 5
+    },
+    "Moon": {
+      "summary": "Saturn–Moon may bring emotional delays or mother-related concerns. Patience and service help. Long-term stability.",
+      "tone": "mixed",
+      "keywords": [
+        "emotions",
+        "delays",
+        "patience"
+      ],
+      "impact": 5
+    },
+    "Mars": {
+      "summary": "Saturn–Mars may bring delays, hard work, or health concerns. Property gains with patience. Avoid litigation.",
+      "tone": "mixed",
+      "keywords": [
+        "delays",
+        "property",
+        "patience"
+      ],
+      "impact": 5
+    },
+    "Rahu": {
+      "summary": "Saturn–Rahu often creates delays, karma, and unconventional paths. Long-term gains; avoid shortcuts and stay ethical.",
+      "tone": "challenging",
+      "keywords": [
+        "delays",
+        "karma",
+        "patience"
+      ],
+      "impact": 3
+    },
+    "Jupiter": {
+      "summary": "Saturn–Jupiter blends wisdom with discipline. Gains through patience and service. Long-term growth with effort.",
+      "tone": "mixed",
+      "keywords": [
+        "wisdom",
+        "patience",
+        "service"
+      ],
+      "impact": 5
+    },
+    "Saturn": {
+      "summary": "Saturn–Saturn emphasizes hard work, delays, and karma. Patience brings eventual rewards. Health and elders need attention.",
+      "tone": "challenging",
+      "keywords": [
+        "discipline",
+        "delays",
+        "karma"
+      ],
+      "impact": 3
+    },
+    "Mercury": {
+      "summary": "Saturn–Mercury supports communication and business with discipline. Gains through accounts, trade, or service. Patience required.",
+      "tone": "mixed",
+      "keywords": [
+        "communication",
+        "business",
+        "patience"
+      ],
+      "impact": 5
+    }
+  },
+  "Mercury": {
+    "Ketu": {
+      "summary": "Mercury–Ketu blends intellect with mysticism. Interest in astrology or research. Unconventional communication.",
+      "tone": "mixed",
+      "keywords": [
+        "intellect",
+        "research",
+        "spirituality"
+      ],
+      "impact": 5
+    },
+    "Venus": {
+      "summary": "Mercury–Venus favors creativity, communication, and business. Relationships and intellectual pursuits flourish.",
+      "tone": "favorable",
+      "keywords": [
+        "creativity",
+        "communication",
+        "relationships"
+      ],
+      "impact": 7.5
+    },
+    "Sun": {
+      "summary": "Mercury–Sun favors intellect, communication, and career. Business through writing or trade. Balance mental stress.",
+      "tone": "favorable",
+      "keywords": [
+        "intellect",
+        "business",
+        "career"
+      ],
+      "impact": 7.5
+    },
+    "Moon": {
+      "summary": "Mercury–Moon supports communication, creativity, and emotions. Good for writing, trade, and domestic harmony.",
+      "tone": "favorable",
+      "keywords": [
+        "communication",
+        "creativity",
+        "emotions"
+      ],
+      "impact": 7.5
+    },
+    "Mars": {
+      "summary": "Mercury–Mars favors communication, technical work, and business. Sharp intellect and courage. Good for trade.",
+      "tone": "favorable",
+      "keywords": [
+        "communication",
+        "business",
+        "courage"
+      ],
+      "impact": 7.5
+    },
+    "Rahu": {
+      "summary": "Mercury–Rahu favors communication, technology, and unconventional business. Sharp but scattered energy. Focus helps.",
+      "tone": "mixed",
+      "keywords": [
+        "communication",
+        "technology",
+        "business"
+      ],
+      "impact": 5
+    },
+    "Jupiter": {
+      "summary": "Mercury–Jupiter favors education, business, and wisdom. Intellectual and material expansion. Good for teaching.",
+      "tone": "favorable",
+      "keywords": [
+        "education",
+        "business",
+        "wisdom"
+      ],
+      "impact": 7.5
+    },
+    "Saturn": {
+      "summary": "Mercury–Saturn supports communication with discipline. Gains through accounts or service. Patience required.",
+      "tone": "mixed",
+      "keywords": [
+        "communication",
+        "business",
+        "patience"
+      ],
+      "impact": 5
+    },
+    "Mercury": {
+      "summary": "Mercury–Mercury emphasizes intellect, communication, and business. Sharp thinking and trade. Manage restlessness.",
+      "tone": "favorable",
+      "keywords": [
+        "intellect",
+        "communication",
+        "business"
+      ],
+      "impact": 7.5
+    }
+  }
+}

@@ -78,6 +78,10 @@ echo "📎 Syncing shared/numerology-core into function app directory..."
 rm -rf "$SCRIPT_DIR/shared-numerology-core"
 cp -R "$REPO_ROOT/shared/numerology-core" "$SCRIPT_DIR/shared-numerology-core"
 
+echo "📎 Syncing shared/app-locale-registry into function app directory..."
+rm -rf "$SCRIPT_DIR/shared-app-locale-registry"
+cp -R "$REPO_ROOT/shared/app-locale-registry" "$SCRIPT_DIR/shared-app-locale-registry"
+
 # Deploy the function app (--build remote: npm install runs on Azure Linux, fixes native modules like swisseph-v2)
 echo "📤 Deploying function code..."
 func azure functionapp publish "$FUNCTION_APP_NAME" --node --build remote

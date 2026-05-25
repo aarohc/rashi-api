@@ -5,6 +5,9 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 # Configuration
 FUNCTION_APP_NAME="${AZURE_FUNCTION_APP_NAME:-rashi-api-function}"
 RESOURCE_GROUP="${AZURE_RESOURCE_GROUP:-rashi-api-group}"
@@ -77,6 +80,10 @@ if command -v npm &> /dev/null && [ -f "package.json" ]; then
 else
     echo "⚠️  npm not found, Azure will install dependencies during deployment"
 fi
+
+echo "📎 Syncing shared/app-locale-registry into function app directory..."
+rm -rf "$SCRIPT_DIR/shared-app-locale-registry"
+cp -R "$REPO_ROOT/shared/app-locale-registry" "$SCRIPT_DIR/shared-app-locale-registry"
 
 # Create deployment package
 echo "📦 Creating deployment package..."
